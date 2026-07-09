@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "ASF Shopee Admin",
+    "slug": "asf-shopee-admin",
+    "scheme": "asfshopeeadmin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "splash": { "image": "./assets/images/splash.png", "backgroundColor": "#101214" },
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router", "expo-notifications"],
+    "android": { "package": "com.asfshopee.admin" },
+    "ios": { "bundleIdentifier": "com.asfshopee.admin" }
+  }
+}

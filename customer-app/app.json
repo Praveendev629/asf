@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "ASF Shopee",
+    "slug": "asf-shopee-customer",
+    "scheme": "asfshopee",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo.png",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "backgroundColor": "#101214"
+    },
+    "userInterfaceStyle": "dark",
+    "plugins": ["expo-router", "expo-location", "expo-notifications"],
+    "android": {
+      "package": "com.asfshopee.customer",
+      "config": { "googleMaps": { "apiKey": "YOUR_GOOGLE_MAPS_API_KEY" } }
+    },
+    "ios": {
+      "bundleIdentifier": "com.asfshopee.customer",
+      "config": { "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY" }
+    }
+  }
+}
