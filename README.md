@@ -72,6 +72,16 @@ All icons use **Ionicons / lucide-react** — no emojis anywhere in the UI.
 3. The Shop Owner app instead uploads through the backend (`/api/upload`), which
    uses your API Secret securely (never exposed to the mobile client).
 
+**Why the website only needs Cloud Name + Upload Preset (no API Key/Secret):**
+An unsigned preset lets the browser upload directly to Cloudinary without
+proving identity with a secret — Cloudinary enforces the preset's
+pre-configured rules (folder, allowed formats, size limits) instead. This is
+intentional and safe: the Cloud Name + Preset name are meant to be public.
+The **API Key + Secret are more powerful** (they can delete/list/modify any
+asset) and are only ever used **server-side**, in `backend/.env` — never in
+the website or any mobile app bundle, because anything shipped to a browser
+or device can be extracted by an attacker.
+
 ---
 
 ## 4. Backend Setup (deploy to Render)
@@ -136,37 +146,31 @@ Deploy anywhere that supports Next.js (Vercel recommended): `npm run build && np
 ## 6. Mobile Apps Setup (Expo — customer-app, admin-app, shop-owner-app)
 
 Each app is independent but shares the same Firebase project and backend API.
+Each app now has a real **`.env`** workflow (loaded via the `dotenv` package
+inside `app.config.js`, which replaces the old static `app.json`):
 
 ```bash
 cd customer-app        # repeat for admin-app and shop-owner-app
+cp .env.example .env   # then fill in the real values
 npm install
 npx expo start
 ```
 
-Before running, add your config as `extra` fields so `expo-constants` can read
-them at runtime. Create `app.config.js` next to `app.json` in each app (or add
-an `extra` block inside `app.json`):
+`app.config.js` reads `process.env.*` (populated from `.env` by
+`require("dotenv/config")`) and exposes them under `expo.extra`, which the
+app reads at runtime via `Constants.expoConfig?.extra` (see `lib/firebase.ts`,
+`lib/api.ts`). You don't need to hand-edit `app.config.js` — just fill in `.env`.
 
-```js
-// app.config.js
-export default {
-  expo: {
-    ...require("./app.json").expo,
-    extra: {
-      firebaseApiKey: process.env.FIREBASE_API_KEY,
-      firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,
-      firebaseProjectId: process.env.FIREBASE_PROJECT_ID,
-      firebaseStorageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      firebaseMessagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      firebaseAppId: process.env.FIREBASE_APP_ID,
-      apiBaseUrl: process.env.API_BASE_URL, // e.g. https://asf-shopee-backend.onrender.com/api
-    },
-  },
-};
+`.env` is **not** picked up automatically by EAS Build (cloud builds don't
+see your local filesystem). For real device builds, mirror the same values as
+EAS secrets:
+```bash
+eas secret:create --name FIREBASE_API_KEY --value "your-value"
+eas secret:create --name GOOGLE_MAPS_API_KEY --value "your-value"
+# ...repeat for each variable in .env.example
 ```
-
-Also replace `YOUR_GOOGLE_MAPS_API_KEY` in `customer-app/app.json` with your
-real Google Maps key (needed for the live tracking + address map screens).
+EAS automatically injects secrets as `process.env.*` during the build, so
+`app.config.js` picks them up the same way it does locally.
 
 **Assets** — drop your real files into each app's `assets/` folder before
 building:
