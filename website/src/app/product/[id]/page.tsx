@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { api } from "@/lib/api";
 import { ShoppingCart, Heart, ShieldCheck, Truck } from "lucide-react";
 
-export default function ProductPage({ params }: { params: { id: string } }) {
+export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const [product, setProduct] = useState<any>(null);
   const [activeImage, setActiveImage] = useState(0);
 
   useEffect(() => {
-    api.getProduct(params.id).then(setProduct).catch(() => setProduct(null));
-  }, [params.id]);
+    api.getProduct(id).then(setProduct).catch(() => setProduct(null));
+  }, [id]);
 
   if (!product) {
     return (
