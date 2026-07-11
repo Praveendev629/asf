@@ -1,0 +1,8 @@
+@tailwind base; @tailwind components; @tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap");
+html { scroll-behavior: smooth; } body { background: #faf7f2; color: #1c2028; }
+.container-app { max-width: 1280px; margin-left: auto; margin-right: auto; padding-left: 1.25rem; padding-right: 1.25rem; }
+.btn-primary { background: linear-gradient(135deg, #b8763e, #8f5a2c); color: white; border-radius: 0.9rem; padding: 0.75rem 1.5rem; font-weight: 600; transition: all 0.2s ease; box-shadow: 0 8px 24px -8px rgba(184, 118, 62, 0.55); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -8px rgba(184, 118, 62, 0.65); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.card { background: white; border-radius: 1.25rem; box-shadow: 0 2px 12px rgba(28, 32, 40, 0.08); }
