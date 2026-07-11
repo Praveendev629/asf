@@ -20,7 +20,11 @@ export default function AdminPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+    const interval = setInterval(loadAll, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
   async function loadProducts() { const res = await fetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
