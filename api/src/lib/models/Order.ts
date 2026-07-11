@@ -39,6 +39,7 @@ export interface IOrder {
   deliveryPartner?: {
     name: string;
     phone: string;
+    email: string;
     eta: string;
     lat?: number;
     lng?: number;
@@ -72,6 +73,7 @@ const OrderSchema = new Schema<IOrder>(
     deliveryPartner: {
       name: String,
       phone: String,
+      email: String,
       eta: String,
       lat: Number,
       lng: Number,

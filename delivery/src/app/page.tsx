@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User } from "lucide-react";
 
 interface DeliveryPartnerInfo { _id: string; name: string; phone: string; email: string; }
-interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
+interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; items: { name: string; quantity: number; price: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
 const STATUS_LABELS: Record<string, string> = { placed: "New Order", confirmed: "Confirmed", packed: "Packed", dispatched: "Dispatched", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
 
 export default function DeliveryDashboard() {
@@ -100,6 +100,15 @@ export default function DeliveryDashboard() {
                   <div className="flex items-center gap-2 text-sm text-gray-700"><Phone size={14} className="text-gray-400" /><a href={`tel:${order.userPhone}`} className="text-blue-600 font-medium">+91 {order.userPhone}</a></div>
                   <div className="flex items-start gap-2 text-sm text-gray-700"><MapPin size={14} className="text-gray-400 mt-0.5 shrink-0" /><span>{order.deliveryAddress.line1}{order.deliveryAddress.line2 ? `, ${order.deliveryAddress.line2}` : ""}, {order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</span></div>
                   {order.deliveryPartner?.eta && <div className="flex items-center gap-2 text-sm text-gray-700"><Clock size={14} className="text-gray-400" /><span className="font-medium text-amber-600">ETA: {order.deliveryPartner.eta}</span></div>}
+                </div>
+                <div className="mb-3 space-y-1">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Items to deliver:</p>
+                  {order.items?.map((item, i) => (
+                    <div key={i} className="flex justify-between text-sm">
+                      <span className="text-gray-700">{item.name} <span className="text-gray-400">× {item.quantity}</span></span>
+                      <span className="font-medium">₹{item.price * item.quantity}</span>
+                    </div>
+                  ))}
                 </div>
                 <p className="font-semibold text-gray-900 mb-3">Total: ₹{order.total}</p>
                 <div className="flex gap-2">

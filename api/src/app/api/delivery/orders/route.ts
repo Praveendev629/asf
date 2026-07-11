@@ -11,21 +11,19 @@ export async function GET(req: NextRequest) {
     const filter = searchParams.get("filter");
 
     let query: Record<string, unknown>;
+
     if (filter === "my") {
+      // Show orders assigned to this partner (by email match)
       query = { "deliveryPartner.email": partner.email };
-    } else if (filter === "active") {
-      query = {
-        "deliveryPartner.email": partner.email,
-        status: { $nin: ["delivered"] },
-      };
     } else {
-      // Available = no partner assigned yet
+      // Show available orders: no partner assigned yet, still in placed status
       query = {
-        $or: [
-          { deliveryPartner: { $exists: false } },
-          { deliveryPartner: null },
-        ],
         status: "placed",
+        $or: [
+          { "deliveryPartner.email": { $exists: false } },
+          { "deliveryPartner.email": null },
+          { "deliveryPartner.email": "" },
+        ],
       };
     }
 

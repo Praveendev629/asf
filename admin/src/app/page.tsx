@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; mrp: number; price: number; stock: number; }
-interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
+interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; items: { product: string; name: string; image: string; price: number; quantity: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string; email?: string }; createdAt: string; }
 interface UserData { _id: string; name: string; email: string; phone?: string; address?: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; createdAt: string; }
 interface DeliveryPartnerData { _id: string; name: string; phone: string; email: string; isAvailable: boolean; currentLocation?: { lat: number; lng: number }; createdAt: string; }
 const STAGES = ["placed", "confirmed", "packed", "dispatched", "out_for_delivery", "delivered"];
@@ -95,9 +95,16 @@ export default function AdminPage() {
           {orders.map((o) => (
             <div key={o._id} className="card p-4">
               <div className="flex items-center justify-between gap-4 flex-wrap cursor-pointer" onClick={() => setExpandedOrder(expandedOrder === o._id ? null : o._id)}>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-medium text-asf-slateDeep">#{o.orderNumber}</p>
                   <p className="text-xs text-asf-slate">{o.userName} · +91 {o.userPhone}</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {o.items?.map((item, i) => (
+                      <span key={i} className="text-[11px] bg-asf-mist text-asf-slateDeep px-2 py-0.5 rounded-full">
+                        {item.name} × {item.quantity}
+                      </span>
+                    ))}
+                  </div>
                   {o.deliveryPartner && <p className="text-xs text-green-600 flex items-center gap-1 mt-1"><Truck size={12} /> {o.deliveryPartner.name} · +91 {o.deliveryPartner.phone}</p>}
                 </div>
                 <div className="flex items-center gap-3">
@@ -110,6 +117,20 @@ export default function AdminPage() {
               </div>
               {expandedOrder === o._id && (
                 <div className="mt-4 pt-4 border-t border-asf-mist space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-asf-slateDeep mb-2 flex items-center gap-1"><Package size={14} /> Items Ordered</p>
+                    <div className="bg-asf-mist/30 rounded-xl p-3 space-y-1">
+                      {o.items?.map((item, i) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span className="text-asf-slateDeep">{item.name} <span className="text-asf-slate">× {item.quantity}</span></span>
+                          <span className="font-medium">₹{item.price * item.quantity}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm font-semibold border-t border-asf-mist pt-1 mt-1">
+                        <span>Total</span><span>₹{o.total}</span>
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-asf-slateDeep mb-1 flex items-center gap-1"><MapPin size={14} /> Delivery Address</p>
                     <p className="text-sm text-asf-slate">{o.deliveryAddress.line1}{o.deliveryAddress.line2 ? `, ${o.deliveryAddress.line2}` : ""}, {o.deliveryAddress.city}, {o.deliveryAddress.state} - {o.deliveryAddress.pincode}</p>

@@ -29,16 +29,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (body.action === "accept") {
       const partner = await DeliveryPartner.findById(partnerData.partnerId);
       if (!partner) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
-      order.deliveryPartner = { name: partner.name, phone: partner.phone, eta: "", lat: partner.currentLocation?.lat, lng: partner.currentLocation?.lng };
+
+      order.deliveryPartner = {
+        name: partner.name,
+        phone: partner.phone,
+        email: partner.email,
+        eta: "",
+        lat: partner.currentLocation?.lat,
+        lng: partner.currentLocation?.lng,
+      };
+
       if (partner.currentLocation && order.deliveryAddress?.lat && order.deliveryAddress?.lng) {
         const dist = haversineDistance(partner.currentLocation.lat, partner.currentLocation.lng, order.deliveryAddress.lat, order.deliveryAddress.lng);
         order.deliveryPartner.eta = formatETA(estimateDeliveryMinutes(dist));
       }
+
       order.status = "confirmed";
       order.statusHistory.push({ status: "confirmed", at: new Date() });
     } else if (body.status && ORDER_STAGES.includes(body.status)) {
       order.status = body.status;
       order.statusHistory.push({ status: body.status, at: new Date() });
+
       if (body.lat && body.lng && order.deliveryAddress?.lat && order.deliveryAddress?.lng) {
         const dist = haversineDistance(body.lat, body.lng, order.deliveryAddress.lat, order.deliveryAddress.lng);
         if (order.deliveryPartner) {
