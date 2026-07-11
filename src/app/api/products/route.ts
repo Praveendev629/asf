@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Product from "@/lib/models/Product";
-import { requireAdmin } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   await connectDB();
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdmin(req);
     await connectDB();
     const body = await req.json();
     const slug = String(body.name)
@@ -28,7 +26,6 @@ export async function POST(req: NextRequest) {
     const product = await Product.create({ ...body, slug });
     return NextResponse.json({ product }, { status: 201 });
   } catch (err: any) {
-    const status = err.message === "UNAUTHENTICATED" ? 401 : err.message === "FORBIDDEN" ? 403 : 400;
-    return NextResponse.json({ error: err.message || "Failed to create product" }, { status });
+    return NextResponse.json({ error: err.message || "Failed to create product" }, { status: 400 });
   }
 }

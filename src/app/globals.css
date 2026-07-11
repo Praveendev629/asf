@@ -18,12 +18,6 @@ body {
   color: #fff;
 }
 
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  border-radius: 1rem;
-}
-
 .strike {
   text-decoration: line-through;
   opacity: 0.55;

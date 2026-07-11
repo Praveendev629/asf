@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { CheckCircle2, Package, Truck, Home, Phone, Clock } from "lucide-react";
+import {
+  CheckCircle2,
+  Package,
+  Truck,
+  Home,
+  Phone,
+  Clock,
+  MapPin,
+  Navigation,
+} from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 
 const STAGE_META: Record<string, { label: string; icon: any }> = {
@@ -22,8 +31,21 @@ interface Order {
   status: string;
   total: number;
   items: { name: string; image: string; price: number; quantity: number }[];
-  deliveryAddress: { line1: string; city: string; state: string; pincode: string };
-  deliveryPartner?: { name: string; phone: string; eta: string };
+  deliveryAddress: {
+    line1: string;
+    city: string;
+    state: string;
+    pincode: string;
+    lat?: number;
+    lng?: number;
+  };
+  deliveryPartner?: {
+    name: string;
+    phone: string;
+    eta: string;
+    lat?: number;
+    lng?: number;
+  };
   createdAt: string;
 }
 
@@ -60,6 +82,21 @@ export default function OrderTrackingPage() {
         <p className="text-asf-slate text-sm mt-1">Order #{order.orderNumber}</p>
       </motion.div>
 
+      {/* Delivery ETA Banner */}
+      {order.deliveryPartner?.eta && order.status !== "delivered" && (
+        <div className="card p-5 mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+              <Clock size={24} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-amber-700 font-medium">Estimated Delivery</p>
+              <p className="text-2xl font-bold text-amber-900">{order.deliveryPartner.eta}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="card p-6 mb-6">
         <h2 className="font-semibold text-asf-slateDeep mb-6">Order Progress</h2>
         <div className="space-y-0">
@@ -90,30 +127,53 @@ export default function OrderTrackingPage() {
         </div>
       </div>
 
+      {/* Delivery Partner */}
       {order.deliveryPartner && (
         <div className="card p-6 mb-6">
-          <h2 className="font-semibold text-asf-slateDeep mb-3">Delivery Partner</h2>
+          <h2 className="font-semibold text-asf-slateDeep mb-3 flex items-center gap-2">
+            <Truck size={18} />
+            Delivery Partner
+          </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">{order.deliveryPartner.name}</p>
-              <p className="text-sm text-asf-slate flex items-center gap-1">
-                <Clock size={14} /> ETA {order.deliveryPartner.eta}
-              </p>
+              <p className="font-medium text-asf-slateDeep">{order.deliveryPartner.name}</p>
+              {order.deliveryPartner.eta && (
+                <p className="text-sm text-asf-slate flex items-center gap-1">
+                  <Clock size={14} /> ETA: {order.deliveryPartner.eta}
+                </p>
+              )}
             </div>
-            <a href={`tel:${order.deliveryPartner.phone}`} className="btn-primary text-sm py-2 px-4 flex items-center gap-1">
+            <a
+              href={`tel:${order.deliveryPartner.phone}`}
+              className="btn-primary text-sm py-2 px-4 flex items-center gap-1"
+            >
               <Phone size={14} /> Call
             </a>
           </div>
+          {/* Delivery partner location */}
+          {order.deliveryPartner.lat && order.deliveryPartner.lng && (
+            <div className="mt-3 pt-3 border-t border-asf-mist">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${order.deliveryPartner.lat},${order.deliveryPartner.lng}&destination=${order.deliveryAddress.lat || ""},${order.deliveryAddress.lng || ""}&travelmode=driving`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+              >
+                <Navigation size={14} /> Track delivery partner
+              </a>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Items */}
       <div className="card p-6 mb-6">
         <h2 className="font-semibold text-asf-slateDeep mb-4">Items</h2>
         <div className="space-y-2 text-sm">
           {order.items.map((item, i) => (
             <div key={i} className="flex justify-between">
               <span>
-                {item.name} × {item.quantity}
+                {item.name} x {item.quantity}
               </span>
               <span>₹{item.price * item.quantity}</span>
             </div>
@@ -125,12 +185,26 @@ export default function OrderTrackingPage() {
         </div>
       </div>
 
+      {/* Delivery Address */}
       <div className="card p-6">
-        <h2 className="font-semibold text-asf-slateDeep mb-2">Delivering to</h2>
+        <h2 className="font-semibold text-asf-slateDeep mb-2 flex items-center gap-2">
+          <MapPin size={18} />
+          Delivering to
+        </h2>
         <p className="text-sm text-asf-slate">
           {order.deliveryAddress.line1}, {order.deliveryAddress.city}, {order.deliveryAddress.state} -{" "}
           {order.deliveryAddress.pincode}
         </p>
+        {order.deliveryAddress.lat && order.deliveryAddress.lng && (
+          <a
+            href={`https://www.google.com/maps?q=${order.deliveryAddress.lat},${order.deliveryAddress.lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline mt-2 inline-flex items-center gap-1"
+          >
+            <MapPin size={12} /> View location on map
+          </a>
+        )}
       </div>
     </div>
   );

@@ -1,26 +1,11 @@
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
-import { useEffect, useState } from "react";
-import L from "leaflet";
+import { useCallback, useState } from "react";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 
-// Fix default marker icons for bundlers
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-});
+const containerStyle = { width: "100%", height: "100%" };
 
-function ClickHandler({ onSelect }: { onSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
+const defaultCenter = { lat: 28.6139, lng: 77.209 };
 
 export default function LocationMap({
   lat,
@@ -31,27 +16,54 @@ export default function LocationMap({
   lng: number;
   onChange: (lat: number, lng: number) => void;
 }) {
-  const [position, setPosition] = useState<[number, number]>([lat, lng]);
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
 
-  useEffect(() => {
-    setPosition([lat, lng]);
-  }, [lat, lng]);
+  const [center, setCenter] = useState({ lat, lng });
+
+  const onMapClick = useCallback(
+    (e: google.maps.MapMouseEvent) => {
+      if (e.latLng) {
+        const newLat = e.latLng.lat();
+        const newLng = e.latLng.lng();
+        setCenter({ lat: newLat, lng: newLng });
+        onChange(newLat, newLng);
+      }
+    },
+    [onChange]
+  );
+
+  if (loadError) {
+    return (
+      <div className="w-full h-72 rounded-2xl border border-red-200 bg-red-50 flex items-center justify-center text-red-600 text-sm">
+        Failed to load Google Maps. Check your API key.
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="w-full h-72 rounded-2xl border border-asf-mist bg-asf-mist/30 flex items-center justify-center text-asf-slate text-sm animate-pulse">
+        Loading map...
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-72 rounded-2xl overflow-hidden border border-asf-mist">
-      <MapContainer center={position} zoom={15} style={{ width: "100%", height: "100%" }}>
-        <TileLayer
-          attribution='&copy; OpenStreetMap contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={position} />
-        <ClickHandler
-          onSelect={(newLat, newLng) => {
-            setPosition([newLat, newLng]);
-            onChange(newLat, newLng);
-          }}
-        />
-      </MapContainer>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={center}
+        zoom={15}
+        onClick={onMapClick}
+        options={{
+          streetViewControl: false,
+          mapTypeControl: false,
+        }}
+      >
+        <Marker position={center} />
+      </GoogleMap>
     </div>
   );
 }
