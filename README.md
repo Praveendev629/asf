@@ -1,263 +1,115 @@
-# ASF Shopee — Full Platform Setup Guide
+# ASF Shopee — Premium Grocery Commerce Platform
 
-Premium e-commerce platform: one website + three Expo apps, all sharing a single
-Firebase backend, Cloudinary for image storage, and a Node/Express API deployed
-on **Render**.
+A production-ready grocery commerce app built with Next.js 14 (App Router), TypeScript, Tailwind CSS, and Framer Motion. It runs as a single Vercel-deployable project and includes:
 
-```
-ASF Shopee/
-├── website/          Next.js 15 storefront (Tailwind, Framer Motion, lucide icons)
-├── customer-app/      Expo app — shopping, checkout, live order tracking
-├── admin-app/         Expo app — dashboard, order management, notifications
-├── shop-owner-app/     Expo app — product upload (images -> Cloudinary)
-├── backend/           Express API on Render — Firebase Admin + Cloudinary + Razorpay
-└── shared/theme.js    Shared color tokens used across all apps
-```
+- **Storefront** — animated brand splash, category browsing, search, product detail pages with strikethrough MRP/savings, cart, and checkout.
+- **Auth** — Firebase Google Sign-In. Browsing is open to everyone; sign-in is only required at purchase time.
+- **Onboarding** — after sign-in, a 3-step flow collects **phone number** (no OTP/verification step, used only for delivery coordination) → **address** → **interactive map pin** (OpenStreetMap/Leaflet, no API key required), then returns the user straight back to checkout.
+- **Order tracking** — live-updating (polling every 5s) progress through Placed → Confirmed → Packed → Dispatched → Out for Delivery → Delivered, plus delivery partner contact once assigned.
+- **Admin dashboard** (`/admin`) — combines product management (create/edit/delete, multi-image upload to Cloudinary, stock/pricing/discount) and order management (status updates, which sync instantly to the customer's tracking page). Restricted to emails listed in `ADMIN_EMAILS`.
+- **Data layer** — MongoDB via Mongoose; product stock automatically decrements on order and shows "Out of Stock" at zero.
 
-All icons use **Ionicons / lucide-react** — no emojis anywhere in the UI.
+> Note on real-time: this build uses fast polling (every 5s) for order status/tracking instead of a persistent Socket.IO server, because Vercel's serverless functions don't hold long-lived socket connections. If you need true push-based websockets, deploy a small Socket.IO relay separately (e.g. on Render) and wire it into the `orders/[id]` page — the data model already supports it.
 
 ---
 
 ## 1. Prerequisites
 
-- Node.js 18+ and npm
-- A [Firebase](https://console.firebase.google.com) project
-- A [Cloudinary](https://cloudinary.com) account (free tier is enough to start)
-- A [Render](https://render.com) account (for the backend API)
-- [Expo CLI](https://docs.expo.dev/get-started/installation/): `npm install -g expo-cli` (or use `npx expo`)
-- (Optional) [Razorpay](https://razorpay.com) account for online payments
-- A Google Maps API key (Maps SDK for Android/iOS + JavaScript API enabled)
+You will need free/paid accounts for:
+
+1. **MongoDB Atlas** — https://www.mongodb.com/cloud/atlas (free tier is enough)
+2. **Firebase** — https://console.firebase.google.com (Authentication + Google provider)
+3. **Cloudinary** — https://cloudinary.com (free tier is enough)
+4. **Vercel** — https://vercel.com (for deployment)
 
 ---
 
-## 2. Firebase Setup (shared by all 4 apps)
+## 2. Environment Variables
 
-1. Create a Firebase project → enable:
-   - **Authentication** → Sign-in method → Google
-   - **Firestore Database** (production mode)
-   - **Cloud Messaging** (FCM)
-2. Create collections (they will also be created automatically on first write):
-   `users, products, orders, categories, addresses, cart, notifications, deliveryPartners, shops, offers, wishlist, reviews`
-3. Deploy the provided security rules:
-   ```bash
-   npm install -g firebase-tools
-   firebase login
-   firebase deploy --only firestore:rules --project <your-project-id>
-   ```
-   (rules file: `backend/firestore/firestore.rules`)
-4. Generate a **Web app** config (Project settings → General → Your apps → Web) —
-   you'll paste these values into `website/.env.local` and each Expo app's `app.config`.
-5. Generate a **Service Account key** (Project settings → Service accounts →
-   Generate new private key). This JSON is used only by the backend.
-   ```bash
-   base64 -w0 serviceAccountKey.json   # Linux
-   base64 serviceAccountKey.json       # macOS
-   ```
-   Save the resulting single-line string — you'll paste it into Render as
-   `FIREBASE_SERVICE_ACCOUNT_BASE64`.
-6. Set custom claims for roles (run once per user, e.g. via a small admin script
-   using `firebase-admin`):
-   ```js
-   admin.auth().setCustomUserClaims(uid, { role: "admin" }); // or "shopOwner", "delivery"
-   ```
+Copy `.env.example` to `.env.local` and fill in every value before running locally. The same variables must be added in **Vercel → Project → Settings → Environment Variables** before deploying.
 
----
-
-## 3. Cloudinary Setup
-
-1. Get your **Cloud Name, API Key, API Secret** from the Cloudinary dashboard.
-2. Create an **unsigned upload preset** (Settings → Upload → Add upload preset,
-   mode = Unsigned) — name it e.g. `asf_shopee_unsigned`. This is used by the
-   website for direct browser uploads.
-3. The Shop Owner app instead uploads through the backend (`/api/upload`), which
-   uses your API Secret securely (never exposed to the mobile client).
-
-**Why the website only needs Cloud Name + Upload Preset (no API Key/Secret):**
-An unsigned preset lets the browser upload directly to Cloudinary without
-proving identity with a secret — Cloudinary enforces the preset's
-pre-configured rules (folder, allowed formats, size limits) instead. This is
-intentional and safe: the Cloud Name + Preset name are meant to be public.
-The **API Key + Secret are more powerful** (they can delete/list/modify any
-asset) and are only ever used **server-side**, in `backend/.env` — never in
-the website or any mobile app bundle, because anything shipped to a browser
-or device can be extracted by an attacker.
-
----
-
-## 4. Backend Setup (deploy to Render)
-
-```bash
-cd backend
-cp .env.example .env
-npm install
-npm run dev        # local dev on http://localhost:10000
-```
-
-Fill in `.env`:
-- `FIREBASE_SERVICE_ACCOUNT_BASE64` — from step 2.5 above
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` (optional, for online payments)
-
-**Deploy to Render:**
-1. Push this `backend/` folder to a GitHub repo (or the whole ASF Shopee repo).
-2. On Render: **New → Web Service** → connect the repo → set root directory to
-   `backend` → it will auto-detect `render.yaml`.
-3. Add the environment variables listed above in the Render dashboard
-   (Environment tab) — they are marked `sync: false` in `render.yaml` so Render
-   will prompt you to fill them in.
-4. Deploy. Your API will be live at `https://<your-service>.onrender.com`.
-5. Test: `curl https://<your-service>.onrender.com/health`
-
-API surface:
-| Method | Route | Purpose |
-|---|---|---|
-| GET | `/api/products` | List/search products |
-| POST | `/api/products` | Create product (Shop Owner/Admin) |
-| GET | `/api/orders` | List orders (own or all for Admin) |
-| POST | `/api/orders` | Create order at checkout |
-| PATCH | `/api/orders/:id/status` | Update order status (Admin) |
-| PATCH | `/api/orders/:id/location` | Update live delivery GPS |
-| POST | `/api/upload` | Upload image to Cloudinary |
-| POST | `/api/payments/create-order` | Create Razorpay order |
-| POST | `/api/payments/verify` | Verify Razorpay payment signature |
-
----
-
-## 5. Website Setup (Next.js)
-
-```bash
-cd website
-cp .env.local.example .env.local
-npm install
-npm run dev     # http://localhost:3000
-```
-
-Fill in `.env.local`:
-- Firebase web config values (from step 2.4)
-- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` and `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET`
-- `NEXT_PUBLIC_API_BASE_URL` → your Render backend URL + `/api`
-- `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
-- `NEXT_PUBLIC_RAZORPAY_KEY_ID`
-
-Deploy anywhere that supports Next.js (Vercel recommended): `npm run build && npm start`.
-
----
-
-## 6. Mobile Apps Setup (Expo — customer-app, admin-app, shop-owner-app)
-
-Each app is independent but shares the same Firebase project and backend API.
-Each app now has a real **`.env`** workflow (loaded via the `dotenv` package
-inside `app.config.js`, which replaces the old static `app.json`):
-
-```bash
-cd customer-app        # repeat for admin-app and shop-owner-app
-cp .env.example .env   # then fill in the real values
-npm install
-npx expo start
-```
-
-`app.config.js` reads `process.env.*` (populated from `.env` by
-`require("dotenv/config")`) and exposes them under `expo.extra`, which the
-app reads at runtime via `Constants.expoConfig?.extra` (see `lib/firebase.ts`,
-`lib/api.ts`). You don't need to hand-edit `app.config.js` — just fill in `.env`.
-
-`.env` is **not** picked up automatically by EAS Build (cloud builds don't
-see your local filesystem). For real device builds, mirror the same values as
-EAS secrets:
-```bash
-eas secret:create --name FIREBASE_API_KEY --value "your-value"
-eas secret:create --name GOOGLE_MAPS_API_KEY --value "your-value"
-# ...repeat for each variable in .env.example
-```
-EAS automatically injects secrets as `process.env.*` during the build, so
-`app.config.js` picks them up the same way it does locally.
-
-**Assets** — drop your real files into each app's `assets/` folder before
-building:
-```
-assets/images/logo.png, logo_dark.png, splash.png
-assets/maps/marker.png
-assets/animations/success.json, delivery.json, loading.json   (Lottie files)
-assets/fonts/Poppins-Regular.ttf, Poppins-Bold.ttf
-```
-
-Run on a device/simulator:
-```bash
-npx expo start        # scan QR with Expo Go, or press "a" / "i" for emulator
-```
-
-Build production binaries with [EAS Build](https://docs.expo.dev/build/introduction/):
-```bash
-npm install -g eas-cli
-eas login
-eas build --platform android
-eas build --platform ios
-```
-
----
-
-## 7. Payments
-
-Two options are wired in:
-
-- **Razorpay (recommended)** — `backend/src/routes/payments.js` creates orders
-  and verifies signatures server-side. Fully automatic UPI/card/wallet payments.
-- **Cash on Delivery** — no integration needed, just mark the order `pending`
-  until delivery.
-
-A plain UPI deep-link option (no gateway) is *not* wired in by default because
-it can't auto-verify payment — use Razorpay for a trustworthy automated flow.
-
----
-
-## 8. Notifications (FCM)
-
-- Each app registers for push notifications (`expo-notifications`) and saves
-  the device token to the user's Firestore document as `fcmToken`.
-- The backend sends notifications via `firebase-admin`'s `messaging.send()`
-  whenever an order status changes, a new order is placed, or a new user
-  registers (see `backend/src/routes/orders.js`).
-
----
-
-## 9. Color Theme (used everywhere)
-
-| Token | Hex |
+| Variable | Where to get it |
 |---|---|
-| Primary (Gun Metal Grey) | `#2B343C` |
-| Secondary (Metallic Copper) | `#B87333` |
-| Accent | `#F5F5F5` |
-| Success | `#27AE60` |
-| Warning | `#F39C12` |
-| Danger | `#E74C3C` |
-| Background | `#101214` |
-| Card | `#1A1D22` |
+| `MONGODB_URI` | Atlas → Database → Connect → Drivers → copy connection string, replace `<password>` |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase Console → Project Settings → General → Your apps → Web app config |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | same as above |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | same as above |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | same as above |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | same as above |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | same as above |
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | Firebase Console → Project Settings → Service Accounts → **Generate new private key** (downloads a JSON file). Paste the full JSON contents as the value (or base64-encode the file first and paste that — both are supported) |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary Dashboard → Account Details |
+| `CLOUDINARY_API_KEY` | same as above |
+| `CLOUDINARY_API_SECRET` | same as above |
+| `ADMIN_EMAILS` | Comma-separated list of emails allowed into `/admin`, e.g. `owner@asf.com,manager@asf.com` |
+| `NEXT_PUBLIC_ADMIN_EMAILS` | Same list as `ADMIN_EMAILS` (exposed to the browser purely to show/hide the Admin nav link — the API always re-checks server-side) |
 
-Defined once in `shared/theme.js` and mirrored in `website/tailwind.config.ts`
-and each Expo app's `lib/theme.ts`.
+### Firebase setup steps
+1. Create a Firebase project.
+2. Go to **Authentication → Sign-in method → Google** and enable it.
+3. Go to **Authentication → Settings → Authorized domains** and add your Vercel domain (e.g. `your-app.vercel.app`) once deployed.
+4. Register a **Web app** under Project Settings to get the `NEXT_PUBLIC_FIREBASE_*` values.
+5. Generate a service account key (Project Settings → Service Accounts) for `FIREBASE_SERVICE_ACCOUNT_KEY`.
+
+### MongoDB setup steps
+1. Create a free cluster on Atlas.
+2. Create a database user and allow network access from `0.0.0.0/0` (or Vercel's IP ranges).
+3. Copy the connection string into `MONGODB_URI`. The database name (e.g. `asf-shopee`) can be anything — Mongoose will create it automatically.
+
+### Cloudinary setup steps
+1. Create a free account.
+2. Copy Cloud Name, API Key, and API Secret from the dashboard home page.
 
 ---
 
-## 10. What's included vs. what you still need to build
+## 3. Local Development
 
-This package gives you a **production-shaped scaffold**: shared backend,
-Firebase/Cloudinary/Razorpay wiring, navigation structure, the full color
-theme, icon-based UI (no emojis), and the core screens/routes described in the
-spec (home, search, product, cart, checkout, order tracking, admin dashboard,
-order management, shop-owner product upload).
+```bash
+npm install
+cp .env.example .env.local   # then fill in the values
+npm run dev
+```
 
-Still to do for a full production launch:
-- Wire remaining screens (cart, wishlist, reviews, offers) to live Firestore data
-- Order-success animation (Lottie `success.json` + confetti) — drop your Lottie
-  file into `assets/animations/` and render it with `lottie-react-native`
-- Delivery partner location updates every few seconds (call
-  `PATCH /api/orders/:id/location` from the delivery partner's device/app)
-- App Store / Play Store listings and EAS build profiles
-- Automated tests and CI/CD
+Visit `http://localhost:3000`.
+
+### Seed sample products (optional)
+```bash
+npm run seed
+```
+This inserts 8 sample grocery products so the storefront isn't empty. You can also add products directly from `/admin` once you've signed in with an email listed in `ADMIN_EMAILS`.
 
 ---
 
-## Support
+## 4. Deploying to Vercel
 
-If any step is unclear, the inline code comments in each route/screen explain
-exactly what Firestore/Cloudinary/Firebase calls are expected there.
+1. Push this project to a GitHub repository.
+2. Go to https://vercel.com/new and import the repository.
+3. Framework preset: **Next.js** (auto-detected).
+4. Add all environment variables listed above under **Settings → Environment Variables** (for Production, Preview, and Development).
+5. Deploy.
+6. After the first deploy, add your Vercel domain to Firebase **Authorized domains** (Authentication → Settings) or Google Sign-In will fail.
+7. Visit `/admin` while signed in with an account listed in `ADMIN_EMAILS` to add real products.
+
+---
+
+## 5. Project Structure
+
+```
+src/
+  app/
+    page.tsx                 storefront (home)
+    products/[id]/page.tsx    product detail
+    cart/page.tsx             cart
+    checkout/page.tsx         checkout (requires phone + address on profile)
+    onboarding/page.tsx        phone → address → map pin (no OTP)
+    orders/[id]/page.tsx      live order tracking
+    admin/page.tsx            admin dashboard (products + orders)
+    api/                      REST API routes (products, orders, users, upload, admin)
+  components/                 Navbar, ProductCard, AuthContext, CartContext, LocationMap, SplashGate
+  lib/                         mongodb, firebaseAdmin, firebaseClient, cloudinary, auth helpers, Mongoose models
+scripts/seed.ts                sample data seeding script
+```
+
+## 6. Notes on scope
+
+This repository focuses on the **ASF Shopee** customer experience with an integrated **Admin** area (covering the "ASF Products" and "ASF Admin" responsibilities from the original brief) so the whole ecosystem deploys as one Vercel project with one set of environment variables. The data models (`Product`, `Order`, `User`) are structured so the admin surface can be split into its own Next.js app later if desired — it would reuse the same MongoDB, Firebase, and Cloudinary credentials.
