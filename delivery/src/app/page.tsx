@@ -22,12 +22,14 @@ export default function DeliveryDashboard() {
     const stored = localStorage.getItem("delivery_partner");
     if (!token || !stored) { router.push("/login"); return; }
     setPartner(JSON.parse(stored)); loadOrders(token);
+    const interval = setInterval(() => { const t = localStorage.getItem("delivery_token"); if (t) loadOrders(t); }, 10000);
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition((pos) => {
         fetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
       }, () => {}, { enableHighAccuracy: true });
-      return () => navigator.geolocation.clearWatch(watchId);
+      return () => { navigator.geolocation.clearWatch(watchId); clearInterval(interval); };
     }
+    return () => clearInterval(interval);
   }, []);
 
   async function loadOrders(token: string) {

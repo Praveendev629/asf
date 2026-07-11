@@ -9,14 +9,26 @@ export async function GET(req: NextRequest) {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const filter = searchParams.get("filter");
+
     let query: Record<string, unknown>;
     if (filter === "my") {
       query = { "deliveryPartner.email": partner.email };
     } else if (filter === "active") {
-      query = { "deliveryPartner.email": partner.email, status: { $nin: ["delivered"] } };
+      query = {
+        "deliveryPartner.email": partner.email,
+        status: { $nin: ["delivered"] },
+      };
     } else {
-      query = { deliveryPartner: { $exists: false }, status: "placed" };
+      // Available = no partner assigned yet
+      query = {
+        $or: [
+          { deliveryPartner: { $exists: false } },
+          { deliveryPartner: null },
+        ],
+        status: "placed",
+      };
     }
+
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
     return NextResponse.json({ orders });
   } catch (err: any) {

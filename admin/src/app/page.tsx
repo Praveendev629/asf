@@ -41,6 +41,8 @@ export default function AdminPage() {
     loadOrders();
   }
   async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await fetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
+  async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
+  async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await fetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
 
   const tabs = [
     { key: "products" as const, label: "Products", icon: Package },
@@ -117,6 +119,9 @@ export default function AdminPage() {
                       {partners.filter((p) => p.isAvailable).map((p) => <option key={p._id} value={p._id}>{p.name} ({p.phone})</option>)}
                     </select>
                   </div>
+                  <div className="pt-2 border-t border-asf-mist">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o._id); }} className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"><Trash2 size={12} /> Delete Order</button>
+                  </div>
                 </div>
               )}
             </div>
@@ -162,7 +167,10 @@ export default function AdminPage() {
                 </button>
               </div>
               {p.currentLocation && <a href={`https://www.google.com/maps?q=${p.currentLocation.lat},${p.currentLocation.lng}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline mt-2 inline-flex items-center gap-1"><MapPin size={12} /> View current location</a>}
-              <p className="text-xs text-asf-slate mt-2">Registered {new Date(p.createdAt).toLocaleDateString()}</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-asf-slate">Registered {new Date(p.createdAt).toLocaleDateString()}</p>
+                <button onClick={() => handleDeletePartner(p._id)} className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
+              </div>
             </div>
           ))}
           {partners.length === 0 && <p className="text-asf-slate text-sm">No delivery partners registered yet.</p>}
