@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; mrp: number; price: number; stock: number; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
@@ -19,18 +19,20 @@ export default function AdminPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 10000);
+    const interval = setInterval(loadAll, 5000);
     return () => clearInterval(interval);
   }, []);
 
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
-  async function loadProducts() { const res = await fetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
-  async function loadOrders() { const res = await fetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
-  async function loadUsers() { const res = await fetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
-  async function loadPartners() { const res = await fetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
+  async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
+  async function loadProducts() { const res = await fetch("/api/products", { cache: "no-store" }); const data = await res.json(); setProducts(data.products || []); }
+  async function loadOrders() { const res = await fetch("/api/admin/orders", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
+  async function loadUsers() { const res = await fetch("/api/admin/users", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
+  async function loadPartners() { const res = await fetch("/api/admin/delivery-partners", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
   async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await fetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
   async function handleStatusChange(orderId: string, status: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
   async function handlePhoneUpdate(orderId: string, phone: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
@@ -53,7 +55,12 @@ export default function AdminPage() {
 
   return (
     <div className="container-app py-10">
-      <h1 className="font-display text-2xl font-semibold text-asf-slateDeep mb-6">ASF Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-display text-2xl font-semibold text-asf-slateDeep">ASF Admin Dashboard</h1>
+        <button onClick={handleRefresh} disabled={refreshing} className="flex items-center gap-2 text-sm font-medium text-asf-slate hover:text-asf-copper transition bg-white border border-asf-mist rounded-xl px-4 py-2">
+          <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
+        </button>
+      </div>
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition ${tab === t.key ? "bg-asf-slateDeep text-white" : "bg-white border border-asf-mist text-asf-slate hover:border-asf-copper"}`}>
