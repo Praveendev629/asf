@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Truck, User, Phone, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 export default function DeliveryRegisterPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function DeliveryRegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault(); setSubmitting(true); setError("");
     try {
-      const res = await fetch("/api/delivery/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, phone, email, password }) });
+      const res = await apiFetch("/api/delivery/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, phone, email, password }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Registration failed");
       localStorage.setItem("delivery_token", data.token);

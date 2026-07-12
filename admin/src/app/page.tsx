@@ -230,7 +230,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true); const formData = new FormData(); formData.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    const res = await apiFetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json(); if (res.ok) setImages((prev) => [...prev, data.url]); setUploading(false);
   }
 
