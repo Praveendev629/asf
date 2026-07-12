@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import ProductForm from "@/components/ProductForm";
 
-interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; mrp: number; price: number; stock: number; }
+interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; unitType: string; unitOptions: { label: string; price: number; mrp: number; stock: number }[]; mrp: number; price: number; stock: number; description: string; variants: { name: string; slug: string; price: number; mrp: number; stock: number; image: string; attributes: Record<string, string> }[]; relatedProducts: string[]; specifications: { label: string; value: string; icon: string }[]; productType: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; items: { product: string; name: string; image: string; price: number; quantity: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string; email?: string }; createdAt: string; }
 interface UserData { _id: string; name: string; email: string; phone?: string; address?: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; createdAt: string; }
 interface DeliveryPartnerData { _id: string; name: string; phone: string; email: string; isAvailable: boolean; currentLocation?: { lat: number; lng: number }; createdAt: string; }
@@ -207,59 +208,6 @@ export default function AdminPage() {
           {partners.length === 0 && <p className="text-asf-slate text-sm">No delivery partners registered yet.</p>}
         </div>
       )}
-    </div>
-  );
-}
-
-function ProductForm({ product, onClose, onSaved }: { product: Product | null; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState(product?.name || "");
-  const [category, setCategory] = useState(product?.category || "Fruits & Vegetables");
-  const [unit, setUnit] = useState(product?.unit || "1 kg");
-  const [mrp, setMrp] = useState(product?.mrp?.toString() || "");
-  const [price, setPrice] = useState(product?.price?.toString() || "");
-  const [stock, setStock] = useState(product?.stock?.toString() || "");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState<string[]>(product?.images || []);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]; if (!file) return;
-    setUploading(true); const formData = new FormData(); formData.append("file", file);
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    const data = await res.json(); if (res.ok) setImages((prev) => [...prev, data.url]); setUploading(false);
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    const payload = { name, category, unit, mrp: Number(mrp), price: Number(price), stock: Number(stock), description, images };
-    const url = product ? `/api/products/${product._id}` : "/api/products";
-    const method = product ? "PATCH" : "POST";
-    await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-    setSaving(false); onSaved();
-  }
-
-  return (
-    <div className="card p-6 mb-6 max-w-xl">
-      <h2 className="font-semibold text-asf-slateDeep mb-4">{product ? "Edit Product" : "New Product"}</h2>
-      <div className="grid gap-3 mb-4">
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Product name" className="border border-asf-mist rounded-xl px-4 py-2" />
-        <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Category" className="border border-asf-mist rounded-xl px-4 py-2" />
-        <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit" className="border border-asf-mist rounded-xl px-4 py-2" />
-        <div className="grid grid-cols-3 gap-3">
-          <input value={mrp} onChange={(e) => setMrp(e.target.value)} placeholder="MRP" type="number" className="border border-asf-mist rounded-xl px-4 py-2" />
-          <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price" type="number" className="border border-asf-mist rounded-xl px-4 py-2" />
-          <input value={stock} onChange={(e) => setStock(e.target.value)} placeholder="Stock" type="number" className="border border-asf-mist rounded-xl px-4 py-2" />
-        </div>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" rows={3} className="border border-asf-mist rounded-xl px-4 py-2" />
-        <input type="file" accept="image/*" onChange={handleUpload} />
-        {uploading && <p className="text-xs text-asf-slate">Uploading...</p>}
-        <div className="flex gap-2 flex-wrap">{images.map((img, i) => <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden bg-asf-mist"><Image src={img} alt="" fill className="object-cover" /></div>)}</div>
-      </div>
-      <div className="flex gap-3">
-        <button onClick={onClose} className="flex-1 border border-asf-mist rounded-xl font-medium py-2">Cancel</button>
-        <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">{saving ? "Saving..." : "Save Product"}</button>
-      </div>
     </div>
   );
 }
