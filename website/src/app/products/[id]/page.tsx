@@ -288,27 +288,29 @@ export default function ProductPage() {
       </div>
 
       {/* Bottom Buy Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 safe-area-pb">
-        <div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-3">
-          {/* Quantity */}
-          {stock > 0 && (
-            <div className="flex items-center border border-gray-200 rounded-xl">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="p-2.5"><Minus size={14} /></button>
-              <span className="w-8 text-center text-sm font-medium">{qty}</span>
-              <button onClick={() => setQty((q) => Math.min(stock, q + 1))} className="p-2.5"><Plus size={14} /></button>
-            </div>
-          )}
+      <div className="fixed bottom-20 left-0 right-0 z-50 safe-area-pb">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 flex items-center gap-3 p-3">
+            {/* Quantity */}
+            {stock > 0 && (
+              <div className="flex items-center border border-gray-200 rounded-xl">
+                <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="p-2.5"><Minus size={14} /></button>
+                <span className="w-8 text-center text-sm font-medium">{qty}</span>
+                <button onClick={() => setQty((q) => Math.min(stock, q + 1))} className="p-2.5"><Plus size={14} /></button>
+              </div>
+            )}
 
-          {/* Add to Cart */}
-          <button onClick={handleAddToCart} disabled={stock <= 0} className="flex-1 bg-gray-900 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition">
-            <ShoppingBag size={16} />
-            {addedToCart ? "Added!" : inCart ? `In Cart (${inCart.quantity})` : "Add to Cart"}
-          </button>
+            {/* Add to Cart */}
+            <button onClick={handleAddToCart} disabled={stock <= 0} className="flex-1 bg-gray-900 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 transition">
+              <ShoppingBag size={16} />
+              {addedToCart ? "Added!" : inCart ? `In Cart (${inCart.quantity})` : "Add to Cart"}
+            </button>
 
-          {/* Buy Now */}
-          <button onClick={handleBuyNow} disabled={stock <= 0} className="flex-1 bg-emerald-600 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-40 transition">
-            Buy Now
-          </button>
+            {/* Buy Now */}
+            <button onClick={handleBuyNow} disabled={stock <= 0} className="flex-1 bg-emerald-600 text-white font-semibold py-3 rounded-xl text-sm disabled:opacity-40 transition">
+              Buy Now
+            </button>
+          </div>
         </div>
       </div>
     </div>
