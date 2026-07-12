@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
-import { apiFetch } from "@/lib/api";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; mrp: number; price: number; stock: number; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; items: { product: string; name: string; image: string; price: number; quantity: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string; email?: string }; createdAt: string; }
@@ -31,23 +30,23 @@ export default function AdminPage() {
 
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
   async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
-  async function loadProducts() { const res = await apiFetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
-  async function loadOrders() { const res = await apiFetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
-  async function loadUsers() { const res = await apiFetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
-  async function loadPartners() { const res = await apiFetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
-  async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await apiFetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
-  async function handleStatusChange(orderId: string, status: string) { await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
-  async function handlePhoneUpdate(orderId: string, phone: string) { await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
+  async function loadProducts() { const res = await fetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
+  async function loadOrders() { const res = await fetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
+  async function loadUsers() { const res = await fetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
+  async function loadPartners() { const res = await fetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
+  async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await fetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
+  async function handleStatusChange(orderId: string, status: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
+  async function handlePhoneUpdate(orderId: string, phone: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
   async function handleAssignPartner(orderId: string, partnerId: string) {
     const partner = partners.find((p) => p._id === partnerId);
     if (!partner) return;
-    await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryPartner: { name: partner.name, phone: partner.phone, email: partner.email, eta: "" }, status: "confirmed" }) });
+    await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryPartner: { name: partner.name, phone: partner.phone, email: partner.email, eta: "" }, status: "confirmed" }) });
     loadOrders();
   }
-  async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await apiFetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
-  async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await apiFetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
-  async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await apiFetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
-  async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await apiFetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
+  async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await fetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
+  async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
+  async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await fetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
+  async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await fetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
 
   const tabs = [
     { key: "products" as const, label: "Products", icon: Package },
@@ -230,7 +229,7 @@ function ProductForm({ product, onClose, onSaved }: { product: Product | null; o
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
     setUploading(true); const formData = new FormData(); formData.append("file", file);
-    const res = await apiFetch("/api/upload", { method: "POST", body: formData });
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
     const data = await res.json(); if (res.ok) setImages((prev) => [...prev, data.url]); setUploading(false);
   }
 

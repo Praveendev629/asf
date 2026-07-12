@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Truck, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { apiFetch } from "@/lib/api";
 
 export default function DeliveryLoginPage() {
   const router = useRouter();
@@ -17,7 +16,7 @@ export default function DeliveryLoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault(); setSubmitting(true); setError("");
     try {
-      const res = await apiFetch("/api/delivery/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      const res = await fetch("/api/delivery/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");
       localStorage.setItem("delivery_token", data.token);

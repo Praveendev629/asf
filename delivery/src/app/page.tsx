@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User } from "lucide-react";
-import { apiFetch } from "@/lib/api";
 
 interface DeliveryPartnerInfo { _id: string; name: string; phone: string; email: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; items: { name: string; quantity: number; price: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
@@ -27,7 +26,7 @@ export default function DeliveryDashboard() {
     const interval = setInterval(() => { const t = localStorage.getItem("delivery_token"); if (t) loadOrders(t); }, 10000);
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition((pos) => {
-        apiFetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+        fetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
       }, () => {}, { enableHighAccuracy: true });
       return () => { navigator.geolocation.clearWatch(watchId); clearInterval(interval); };
     }
@@ -40,8 +39,8 @@ export default function DeliveryDashboard() {
     setLoading(true);
     try {
       const [availRes, myRes] = await Promise.all([
-        apiFetch("/api/delivery/orders", { headers: { Authorization: `Bearer ${token}` } }),
-        apiFetch("/api/delivery/orders?filter=my", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/delivery/orders", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/delivery/orders?filter=my", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (availRes.ok) { const data = await availRes.json(); setAvailableOrders(data.orders || []); }
       if (myRes.ok) { const data = await myRes.json(); setMyOrders(data.orders || []); }
@@ -50,7 +49,7 @@ export default function DeliveryDashboard() {
 
   async function handleAcceptOrder(orderId: string) {
     const token = localStorage.getItem("delivery_token"); if (!token) return;
-    await apiFetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "accept" }) });
+    await fetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "accept" }) });
     loadOrders(token);
   }
 
@@ -63,7 +62,7 @@ export default function DeliveryDashboard() {
         body.lat = pos.coords.latitude; body.lng = pos.coords.longitude;
       } catch {}
     }
-    await apiFetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    await fetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
     loadOrders(token);
   }
 
