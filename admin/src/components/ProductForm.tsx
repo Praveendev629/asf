@@ -68,11 +68,13 @@ export default function ProductForm({ product, onClose, onSaved }: {
 
   // Variant form state
   const [vName, setVName] = useState("");
+  const [vBrand, setVBrand] = useState("");
+  const [vColor, setVColor] = useState("");
+  const [vSize, setVSize] = useState("");
   const [vPrice, setVPrice] = useState("");
   const [vMrp, setVMrp] = useState("");
   const [vStock, setVStock] = useState("");
   const [vImage, setVImage] = useState("");
-  const [vAttrs, setVAttrs] = useState("");
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]; if (!file) return;
@@ -91,18 +93,16 @@ export default function ProductForm({ product, onClose, onSaved }: {
   function addVariant() {
     if (!vName || !vPrice) return;
     const attrs: Record<string, string> = {};
-    if (vAttrs) {
-      vAttrs.split(",").forEach((a) => {
-        const [k, v] = a.split(":").map((s) => s.trim());
-        if (k && v) attrs[k] = v;
-      });
-    }
+    if (vBrand) attrs.brand = vBrand;
+    if (vColor) attrs.color = vColor;
+    if (vSize) attrs.size = vSize;
     setVariants([...variants, {
       name: vName, slug: vName.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       price: Number(vPrice), mrp: Number(vMrp || vPrice), stock: Number(vStock || 0),
       image: vImage, attributes: attrs,
     }]);
-    setVName(""); setVPrice(""); setVMrp(""); setVStock(""); setVImage(""); setVAttrs("");
+    setVName(""); setVBrand(""); setVColor(""); setVSize("");
+    setVPrice(""); setVMrp(""); setVStock(""); setVImage("");
   }
 
   function removeVariant(index: number) {
@@ -240,13 +240,18 @@ export default function ProductForm({ product, onClose, onSaved }: {
                 </div>
               ))}
               <div className="bg-white border border-asf-mist rounded-xl p-3 space-y-2">
-                <input value={vName} onChange={(e) => setVName(e.target.value)} placeholder="Variant name (e.g. Red, XL)" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm w-full" />
+                <p className="text-xs font-medium text-asf-slateDeep">Add New Variant</p>
+                <input value={vName} onChange={(e) => setVName(e.target.value)} placeholder="Variant name (e.g. Red, Galaxy Buds Pro)" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm w-full" />
+                <div className="grid grid-cols-3 gap-2">
+                  <input value={vBrand} onChange={(e) => setVBrand(e.target.value)} placeholder="Brand / Make" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
+                  <input value={vColor} onChange={(e) => setVColor(e.target.value)} placeholder="Color" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
+                  <input value={vSize} onChange={(e) => setVSize(e.target.value)} placeholder="Size (e.g. XL, 42)" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <input value={vPrice} onChange={(e) => setVPrice(e.target.value)} placeholder="Price" type="number" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
                   <input value={vMrp} onChange={(e) => setVMrp(e.target.value)} placeholder="MRP" type="number" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
                   <input value={vStock} onChange={(e) => setVStock(e.target.value)} placeholder="Stock" type="number" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm" />
                 </div>
-                <input value={vAttrs} onChange={(e) => setVAttrs(e.target.value)} placeholder="Attributes (e.g. color: Red, size: XL)" className="border border-asf-mist rounded-lg px-3 py-1.5 text-sm w-full" />
                 <div className="flex gap-2 items-center">
                   <label className="text-xs text-asf-slate flex items-center gap-1 cursor-pointer"><Upload size={12} /> Image</label>
                   <input type="file" accept="image/*" onChange={handleVariantUpload} className="text-xs" />
