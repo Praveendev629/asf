@@ -3,8 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import { WishlistProvider } from "@/components/WishlistContext";
-import Navbar from "@/components/Navbar";
-import SplashGate from "@/components/SplashGate";
+import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "ASF Shopee — Premium Grocery, Delivered Fast",
@@ -14,20 +13,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="font-sans bg-asf-cream min-h-screen">
+      <body className="font-sans bg-gray-50 min-h-screen pb-20">
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              <SplashGate>
-              <Navbar />
-              <main className="min-h-screen">{children}</main>
-              <footer className="border-t border-asf-mist mt-20 py-10 text-center text-sm text-asf-slate">
-                <div className="container-app">
-                  <p className="font-display text-lg text-asf-slateDeep mb-1">ASF</p>
-                  <p>© {new Date().getFullYear()} ASF Shopee. Crafted for premium grocery delivery.</p>
-                </div>
-              </footer>
-            </SplashGate>
+              {children}
+              <BottomNav />
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

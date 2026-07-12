@@ -2,22 +2,24 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon, Upload } from "lucide-react";
 import ProductForm from "@/components/ProductForm";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; unitType: string; unitOptions: { label: string; price: number; mrp: number; stock: number }[]; mrp: number; price: number; stock: number; description: string; variants: { name: string; slug: string; price: number; mrp: number; stock: number; image: string; attributes: Record<string, string> }[]; relatedProducts: string[]; specifications: { label: string; value: string; icon: string }[]; productType: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; items: { product: string; name: string; image: string; price: number; quantity: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string; email?: string }; createdAt: string; }
 interface UserData { _id: string; name: string; email: string; phone?: string; address?: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; createdAt: string; }
 interface DeliveryPartnerData { _id: string; name: string; phone: string; email: string; isAvailable: boolean; currentLocation?: { lat: number; lng: number }; createdAt: string; }
+interface UpdateData { _id: string; title: string; description: string; imageUrl: string; link: string; isActive: boolean; order: number; createdAt: string; }
 const STAGES = ["placed", "confirmed", "packed", "dispatched", "out_for_delivery", "delivered"];
 const STAGE_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<"products" | "orders" | "users" | "partners">("products");
+  const [tab, setTab] = useState<"products" | "orders" | "users" | "partners" | "updates">("products");
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserData[]>([]);
   const [partners, setPartners] = useState<DeliveryPartnerData[]>([]);
+  const [updates, setUpdates] = useState<UpdateData[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
@@ -29,12 +31,13 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
-  async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
+  async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners(), loadUpdates()]); }
   async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
   async function loadProducts() { const res = await fetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
   async function loadOrders() { const res = await fetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
   async function loadUsers() { const res = await fetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
   async function loadPartners() { const res = await fetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
+  async function loadUpdates() { const res = await fetch("/api/updates"); if (res.ok) { const data = await res.json(); setUpdates(data.updates || []); } }
   async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await fetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
   async function handleStatusChange(orderId: string, status: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
   async function handlePhoneUpdate(orderId: string, phone: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
@@ -54,6 +57,7 @@ export default function AdminPage() {
     { key: "orders" as const, label: "Orders", icon: ClipboardList },
     { key: "users" as const, label: "Users", icon: Users },
     { key: "partners" as const, label: "Partners", icon: Truck },
+    { key: "updates" as const, label: "Updates", icon: ImageIcon },
   ];
 
   return (
@@ -208,6 +212,116 @@ export default function AdminPage() {
           {partners.length === 0 && <p className="text-asf-slate text-sm">No delivery partners registered yet.</p>}
         </div>
       )}
+
+      {/* Updates */}
+      {tab === "updates" && (
+        <UpdatesTab updates={updates} loadUpdates={loadUpdates} />
+      )}
+    </div>
+  );
+}
+
+function UpdatesTab({ updates, loadUpdates }: { updates: UpdateData[]; loadUpdates: () => Promise<void> }) {
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
+    setUploading(true);
+    const formData = new FormData(); formData.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: formData });
+    const data = await res.json();
+    if (res.ok) {
+      // If replacing, delete old image
+      if (editingId) {
+        const existing = updates.find((u) => u._id === editingId);
+        if (existing?.imageUrl) {
+          // Old image will be deleted by the PATCH endpoint
+        }
+      }
+      setImageUrl(data.url);
+    }
+    setUploading(false);
+  }
+
+  async function handleSave() {
+    if (!title || !imageUrl) return;
+    if (editingId) {
+      await fetch("/api/updates", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingId, title, description, imageUrl }),
+      });
+    } else {
+      await fetch("/api/updates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description, imageUrl, order: updates.length }),
+      });
+    }
+    setTitle(""); setDescription(""); setImageUrl(""); setEditingId(null);
+    loadUpdates();
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this banner?")) return;
+    await fetch(`/api/updates?id=${id}`, { method: "DELETE" });
+    loadUpdates();
+  }
+
+  function handleEdit(update: UpdateData) {
+    setEditingId(update._id);
+    setTitle(update.title);
+    setDescription(update.description);
+    setImageUrl(update.imageUrl);
+  }
+
+  return (
+    <div>
+      <div className="card p-6 mb-6 max-w-xl">
+        <h3 className="font-semibold text-asf-slateDeep mb-4">{editingId ? "Edit Banner" : "Add Banner"}</h3>
+        <div className="grid gap-3">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Banner title" className="border border-asf-mist rounded-xl px-4 py-2" />
+          <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description (optional)" className="border border-asf-mist rounded-xl px-4 py-2" />
+          <div>
+            <label className="text-sm font-medium text-asf-slateDeep mb-1 block">Banner Image</label>
+            <input type="file" accept="image/*" onChange={handleUpload} />
+            {uploading && <p className="text-xs text-asf-slate">Uploading...</p>}
+            {imageUrl && (
+              <div className="relative w-full h-32 mt-2 rounded-xl overflow-hidden bg-asf-mist">
+                <Image src={imageUrl} alt="" fill className="object-cover" />
+                <button onClick={() => { setImageUrl(""); setEditingId(null); }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"><Trash2 size={12} /></button>
+              </div>
+            )}
+          </div>
+          <div className="flex gap-3">
+            {editingId && <button onClick={() => { setEditingId(null); setTitle(""); setDescription(""); setImageUrl(""); }} className="flex-1 border border-asf-mist rounded-xl font-medium py-2">Cancel</button>}
+            <button onClick={handleSave} disabled={!title || !imageUrl} className="btn-primary flex-1">{editingId ? "Update Banner" : "Add Banner"}</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {updates.map((u) => (
+          <div key={u._id} className="card p-4 flex gap-4 items-center">
+            <div className="relative w-32 h-20 rounded-xl overflow-hidden bg-asf-mist shrink-0">
+              <Image src={u.imageUrl} alt={u.title} fill className="object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-asf-slateDeep">{u.title}</p>
+              {u.description && <p className="text-xs text-asf-slate truncate">{u.description}</p>}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => handleEdit(u)} className="text-asf-slate hover:text-asf-copper"><Pencil size={16} /></button>
+              <button onClick={() => handleDelete(u._id)} className="text-asf-slate hover:text-red-500"><Trash2 size={16} /></button>
+            </div>
+          </div>
+        ))}
+        {updates.length === 0 && <p className="text-asf-slate text-sm">No banners yet. Add one above.</p>}
+      </div>
     </div>
   );
 }

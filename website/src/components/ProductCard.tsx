@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Star, Plus, Heart } from "lucide-react";
-import { motion } from "framer-motion";
+import { Plus } from "lucide-react";
 import { useCart } from "@/components/CartContext";
 import { useWishlist } from "@/components/WishlistContext";
+import { Heart } from "lucide-react";
 
 export interface ProductCardData {
   _id: string; name: string; slug: string; images: string[]; unit: string; mrp: number; price: number; stock: number; rating: number;
@@ -19,42 +19,63 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
   const wished = isWishlisted(product._id);
 
   return (
-    <motion.div whileHover={{ y: -4 }} className="card p-3 flex flex-col group relative overflow-hidden">
-      {/* Wishlist Button */}
+    <div className="bg-white rounded-2xl overflow-hidden relative">
+      {/* Wishlist */}
       <button
         onClick={(e) => { e.preventDefault(); toggle(product._id); }}
-        className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 flex items-center justify-center shadow-sm hover:scale-110 transition"
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center shadow-sm"
       >
-        <Heart size={16} className={wished ? "fill-red-500 text-red-500" : "text-gray-400"} />
+        <Heart size={14} className={wished ? "fill-red-500 text-red-500" : "text-gray-400"} />
       </button>
 
+      {/* Discount badge */}
       {discount > 0 && (
-        <span className="absolute top-3 left-3 z-10 bg-asf-copper text-white text-[11px] font-bold px-2 py-1 rounded-lg">{discount}% OFF</span>
+        <span className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+          {discount}% OFF
+        </span>
       )}
 
       <Link href={`/products/${product.slug}`} className="block">
-        <div className="relative aspect-square rounded-xl overflow-hidden bg-asf-mist mb-3">
-          <Image src={product.images[0] || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400"} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
-          {outOfStock && <div className="absolute inset-0 bg-white/70 flex items-center justify-center"><span className="text-asf-slateDeep font-semibold text-sm">Out of Stock</span></div>}
+        <div className="relative aspect-square bg-gray-50">
+          <Image
+            src={product.images[0] || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400"}
+            alt={product.name}
+            fill
+            className="object-cover"
+          />
+          {outOfStock && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <span className="text-gray-700 font-semibold text-xs">Out of Stock</span>
+            </div>
+          )}
         </div>
-        <p className="text-xs text-asf-slate mb-1">{product.unit}</p>
-        <h3 className="font-medium text-sm text-asf-slateDeep line-clamp-2 mb-1">{product.name}</h3>
-        <div className="flex items-center gap-1 text-xs text-asf-slate mb-2"><Star size={12} className="fill-asf-copper text-asf-copper" />{product.rating.toFixed(1)}</div>
       </Link>
 
-      <div className="flex items-center justify-between mt-auto">
-        <div>
-          <p className="font-semibold text-asf-slateDeep">₹{product.price}</p>
-          {product.mrp > product.price && <p className="text-xs strike">₹{product.mrp}</p>}
+      <div className="p-3">
+        <Link href={`/products/${product.slug}`}>
+          <h3 className="text-xs font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h3>
+          <p className="text-[10px] text-gray-400 mb-2">{product.unit}</p>
+        </Link>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-bold text-gray-900">₹{product.price}</p>
+            {product.mrp > product.price && (
+              <p className="text-[10px] text-gray-400 line-through">₹{product.mrp}</p>
+            )}
+          </div>
+          <button
+            disabled={outOfStock}
+            onClick={() => addItem({
+              productId: product._id, name: product.name, image: product.images[0] || "",
+              price: product.price, mrp: product.mrp, unit: product.unit, stock: product.stock,
+            })}
+            className="w-8 h-8 bg-emerald-600 disabled:opacity-40 text-white rounded-lg flex items-center justify-center hover:bg-emerald-700 transition"
+          >
+            <Plus size={16} />
+          </button>
         </div>
-        <button
-          disabled={outOfStock}
-          onClick={() => addItem({ productId: product._id, name: product.name, image: product.images[0] || "", price: product.price, mrp: product.mrp, unit: product.unit, stock: product.stock })}
-          className="bg-asf-slateDeep disabled:opacity-40 text-white rounded-lg w-9 h-9 flex items-center justify-center hover:bg-asf-copper transition"
-        >
-          <Plus size={18} />
-        </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
