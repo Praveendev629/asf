@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; mrp: number; price: number; stock: number; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; userEmail: string; total: number; status: string; items: { product: string; name: string; image: string; price: number; quantity: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string; email?: string }; createdAt: string; }
 interface UserData { _id: string; name: string; email: string; phone?: string; address?: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; createdAt: string; }
 interface DeliveryPartnerData { _id: string; name: string; phone: string; email: string; isAvailable: boolean; currentLocation?: { lat: number; lng: number }; createdAt: string; }
 const STAGES = ["placed", "confirmed", "packed", "dispatched", "out_for_delivery", "delivered"];
+const STAGE_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
 
 export default function AdminPage() {
   const [tab, setTab] = useState<"products" | "orders" | "users" | "partners">("products");
@@ -27,26 +29,25 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const ts = () => `_t=${Date.now()}`;
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
   async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
-  async function loadProducts() { const res = await fetch(`/api/products?${ts()}`, { cache: "no-store" }); const data = await res.json(); setProducts(data.products || []); }
-  async function loadOrders() { const res = await fetch(`/api/admin/orders?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
-  async function loadUsers() { const res = await fetch(`/api/admin/users?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
-  async function loadPartners() { const res = await fetch(`/api/admin/delivery-partners?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
-  async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await fetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
-  async function handleStatusChange(orderId: string, status: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
-  async function handlePhoneUpdate(orderId: string, phone: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
+  async function loadProducts() { const res = await apiFetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
+  async function loadOrders() { const res = await apiFetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
+  async function loadUsers() { const res = await apiFetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
+  async function loadPartners() { const res = await apiFetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
+  async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await apiFetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
+  async function handleStatusChange(orderId: string, status: string) { await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
+  async function handlePhoneUpdate(orderId: string, phone: string) { await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }
   async function handleAssignPartner(orderId: string, partnerId: string) {
     const partner = partners.find((p) => p._id === partnerId);
     if (!partner) return;
-    await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryPartner: { name: partner.name, phone: partner.phone, eta: "" }, status: "confirmed" }) });
+    await apiFetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deliveryPartner: { name: partner.name, phone: partner.phone, email: partner.email, eta: "" }, status: "confirmed" }) });
     loadOrders();
   }
-  async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await fetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
-  async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
-  async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await fetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
-  async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await fetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
+  async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await apiFetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
+  async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await apiFetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
+  async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await apiFetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
+  async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await apiFetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
 
   const tabs = [
     { key: "products" as const, label: "Products", icon: Package },
@@ -111,6 +112,7 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="font-semibold">₹{o.total}</p>
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STAGE_COLORS[o.status] || "bg-gray-100 text-gray-700"}`}>{o.status.replace(/_/g, " ")}</span>
                   <select value={o.status} onChange={(e) => { e.stopPropagation(); handleStatusChange(o._id, e.target.value); }} onClick={(e) => e.stopPropagation()} className="border border-asf-mist rounded-xl px-3 py-2 text-sm">
                     {STAGES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                   </select>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
+import { WishlistProvider } from "@/components/WishlistContext";
 import Navbar from "@/components/Navbar";
 import SplashGate from "@/components/SplashGate";
 
@@ -16,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="font-sans bg-asf-cream min-h-screen">
         <AuthProvider>
           <CartProvider>
-            <SplashGate>
+            <WishlistProvider>
+              <SplashGate>
               <Navbar />
               <main className="min-h-screen">{children}</main>
               <footer className="border-t border-asf-mist mt-20 py-10 text-center text-sm text-asf-slate">
@@ -26,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
               </footer>
             </SplashGate>
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       </body>

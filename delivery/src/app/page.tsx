@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 interface DeliveryPartnerInfo { _id: string; name: string; phone: string; email: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; items: { name: string; quantity: number; price: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
 const STATUS_LABELS: Record<string, string> = { placed: "New Order", confirmed: "Confirmed", packed: "Packed", dispatched: "Dispatched", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
+const STATUS_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
 
 export default function DeliveryDashboard() {
   const router = useRouter();
@@ -25,7 +27,7 @@ export default function DeliveryDashboard() {
     const interval = setInterval(() => { const t = localStorage.getItem("delivery_token"); if (t) loadOrders(t); }, 10000);
     if (navigator.geolocation) {
       const watchId = navigator.geolocation.watchPosition((pos) => {
-        fetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
+        apiFetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
       }, () => {}, { enableHighAccuracy: true });
       return () => { navigator.geolocation.clearWatch(watchId); clearInterval(interval); };
     }
@@ -38,8 +40,8 @@ export default function DeliveryDashboard() {
     setLoading(true);
     try {
       const [availRes, myRes] = await Promise.all([
-        fetch(`/api/delivery/orders?${ts()}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
-        fetch(`/api/delivery/orders?filter=my&${ts()}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
+        apiFetch("/api/delivery/orders", { headers: { Authorization: `Bearer ${token}` } }),
+        apiFetch("/api/delivery/orders?filter=my", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (availRes.ok) { const data = await availRes.json(); setAvailableOrders(data.orders || []); }
       if (myRes.ok) { const data = await myRes.json(); setMyOrders(data.orders || []); }
@@ -48,7 +50,7 @@ export default function DeliveryDashboard() {
 
   async function handleAcceptOrder(orderId: string) {
     const token = localStorage.getItem("delivery_token"); if (!token) return;
-    await fetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "accept" }) });
+    await apiFetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: "accept" }) });
     loadOrders(token);
   }
 
@@ -61,7 +63,7 @@ export default function DeliveryDashboard() {
         body.lat = pos.coords.latitude; body.lng = pos.coords.longitude;
       } catch {}
     }
-    await fetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    await apiFetch(`/api/delivery/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
     loadOrders(token);
   }
 
@@ -113,7 +115,7 @@ export default function DeliveryDashboard() {
               <div key={order._id} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <div><p className="font-semibold text-gray-900">#{order.orderNumber}</p><p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleString()}</p></div>
-                  <span className={`text-xs font-medium px-3 py-1 rounded-full ${order.status === "delivered" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>{STATUS_LABELS[order.status] || order.status}</span>
+                  <span className={`text-xs font-medium px-3 py-1 rounded-full ${STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>{STATUS_LABELS[order.status] || order.status}</span>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 mb-3 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-700"><User size={14} className="text-gray-400" /><span className="font-medium">{order.userName}</span></div>

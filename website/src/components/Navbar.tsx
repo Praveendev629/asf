@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { ShoppingCart, User, LogOut, LayoutDashboard, Search } from "lucide-react";
+import { ShoppingCart, User, LogOut, LayoutDashboard, Search, ClipboardList } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import { useCart } from "@/components/CartContext";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,11 @@ export default function Navbar() {
           {isAdmin && (
             <Link href={process.env.NEXT_PUBLIC_ADMIN_URL || "/admin"} className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-asf-slateDeep hover:text-asf-copper transition">
               <LayoutDashboard size={18} /> Admin
+            </Link>
+          )}
+          {firebaseUser && (
+            <Link href="/orders" className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-asf-slateDeep hover:text-asf-copper transition">
+              <ClipboardList size={18} /> Orders
             </Link>
           )}
           <Link href="/cart" className="relative">
