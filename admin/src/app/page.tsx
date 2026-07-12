@@ -46,6 +46,7 @@ export default function AdminPage() {
   async function handleTogglePartner(partnerId: string, isAvailable: boolean) { await fetch("/api/admin/delivery-partners", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: partnerId, isAvailable }) }); loadPartners(); }
   async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
   async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await fetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
+  async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await fetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
 
   const tabs = [
     { key: "products" as const, label: "Products", icon: Package },
@@ -173,7 +174,10 @@ export default function AdminPage() {
                 </div>
                 {u.address?.lat && u.address?.lng && <a href={`https://www.google.com/maps?q=${u.address.lat},${u.address.lng}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline shrink-0 flex items-center gap-1"><MapPin size={12} /> Map</a>}
               </div>
-              <p className="text-xs text-asf-slate mt-2">Joined {new Date(u.createdAt).toLocaleDateString()}</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-asf-slate">Joined {new Date(u.createdAt).toLocaleDateString()}</p>
+                <button onClick={() => handleDeleteUser(u._id)} className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
+              </div>
             </div>
           ))}
           {users.length === 0 && <p className="text-asf-slate text-sm">No registered users yet.</p>}
