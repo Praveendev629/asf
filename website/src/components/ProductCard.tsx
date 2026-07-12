@@ -2,10 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Heart } from "lucide-react";
 import { useCart } from "@/components/CartContext";
 import { useWishlist } from "@/components/WishlistContext";
-import { Heart } from "lucide-react";
 
 export interface ProductCardData {
   _id: string; name: string; slug: string; images: string[]; unit: string; mrp: number; price: number; stock: number; rating: number;
@@ -19,11 +18,11 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
   const wished = isWishlisted(product._id);
 
   return (
-    <div className="bg-white rounded-2xl overflow-hidden relative">
+    <div className="bg-white rounded-2xl overflow-hidden relative group hover:shadow-md transition-shadow">
       {/* Wishlist */}
       <button
         onClick={(e) => { e.preventDefault(); toggle(product._id); }}
-        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center shadow-sm"
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/80 flex items-center justify-center shadow-sm opacity-0 group-hover:opacity-100 transition"
       >
         <Heart size={14} className={wished ? "fill-red-500 text-red-500" : "text-gray-400"} />
       </button>
@@ -38,10 +37,10 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
       <Link href={`/products/${product.slug}`} className="block">
         <div className="relative aspect-square bg-gray-50">
           <Image
-            src={product.images[0] || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400"}
+            src={product.images?.[0] || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400"}
             alt={product.name}
             fill
-            className="object-cover"
+            className="object-cover group-hover:scale-105 transition-transform duration-300"
           />
           {outOfStock && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
@@ -53,26 +52,26 @@ export default function ProductCard({ product }: { product: ProductCardData }) {
 
       <div className="p-3">
         <Link href={`/products/${product.slug}`}>
-          <h3 className="text-xs font-medium text-gray-900 line-clamp-2 mb-1">{product.name}</h3>
-          <p className="text-[10px] text-gray-400 mb-2">{product.unit}</p>
+          <p className="text-[10px] text-gray-400 mb-0.5">{product.unit}</p>
+          <h3 className="text-xs font-medium text-gray-900 line-clamp-2 mb-1 leading-tight">{product.name}</h3>
         </Link>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mt-2">
           <div>
-            <p className="text-sm font-bold text-gray-900">₹{product.price}</p>
+            <span className="text-sm font-bold text-gray-900">₹{product.price}</span>
             {product.mrp > product.price && (
-              <p className="text-[10px] text-gray-400 line-through">₹{product.mrp}</p>
+              <span className="text-[10px] text-gray-400 line-through ml-1">₹{product.mrp}</span>
             )}
           </div>
           <button
             disabled={outOfStock}
             onClick={() => addItem({
-              productId: product._id, name: product.name, image: product.images[0] || "",
+              productId: product._id, name: product.name, image: product.images?.[0] || "",
               price: product.price, mrp: product.mrp, unit: product.unit, stock: product.stock,
             })}
-            className="w-8 h-8 bg-emerald-600 disabled:opacity-40 text-white rounded-lg flex items-center justify-center hover:bg-emerald-700 transition"
+            className="w-7 h-7 bg-emerald-600 disabled:opacity-40 text-white rounded-lg flex items-center justify-center hover:bg-emerald-700 transition"
           >
-            <Plus size={16} />
+            <Plus size={14} />
           </button>
         </div>
       </div>

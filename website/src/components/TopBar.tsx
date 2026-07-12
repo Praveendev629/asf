@@ -24,7 +24,7 @@ export default function TopBar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white">
-      <div className="max-w-lg mx-auto flex items-center gap-3 px-4 py-3">
+      <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-3">
         {/* Hamburger */}
         <button onClick={() => setShowMenu(!showMenu)} className="p-2 rounded-xl bg-gray-100">
           {showMenu ? <X size={20} /> : <Menu size={20} />}

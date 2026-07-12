@@ -67,10 +67,10 @@ function HomeContent() {
     <div className="min-h-screen bg-gray-50">
       <TopBar />
 
-      {/* Hero Banner Carousel */}
-      {banners.length > 0 && (
+      {/* Hero Banner Carousel — hidden during search */}
+      {!q && banners.length > 0 && (
         <div className="px-4 mb-6">
-          <div className="relative rounded-2xl overflow-hidden" style={{ aspectRatio: "16/9" }}>
+          <div className="max-w-6xl mx-auto relative rounded-2xl overflow-hidden" style={{ aspectRatio: "21/9" }}>
             {banners.map((banner, i) => (
               <div key={banner._id} className={`absolute inset-0 transition-opacity duration-500 ${i === activeBanner ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <Image src={banner.imageUrl} alt={banner.title} fill className="object-cover" />
@@ -98,8 +98,8 @@ function HomeContent() {
         </div>
       )}
 
-      {/* Default banner if no updates */}
-      {banners.length === 0 && (
+      {/* Default banner — hidden during search */}
+      {!q && banners.length === 0 && (
         <div className="px-4 mb-6">
           <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white relative overflow-hidden">
             <div className="relative z-10">
@@ -114,52 +114,56 @@ function HomeContent() {
         </div>
       )}
 
-      {/* Category Pills */}
-      <div className="px-4 mb-6">
-        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
-                category === c
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-gray-600 border border-gray-200"
-              }`}
-            >
-              {c === "all" ? "All" : c}
-            </button>
-          ))}
+      {/* Category Pills — hidden during search */}
+      {!q && (
+        <div className="px-4 mb-6">
+          <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                onClick={() => setCategory(c)}
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-medium transition ${
+                  category === c
+                    ? "bg-emerald-600 text-white"
+                    : "bg-white text-gray-600 border border-gray-200"
+                }`}
+              >
+                {c === "all" ? "All" : c}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Products */}
       <div className="px-4 mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-display text-lg font-semibold text-gray-900">
-            {q ? `Results for "${q}"` : category === "all" ? "All Products" : category}
-          </h2>
-          {products.length > 0 && <span className="text-xs text-gray-500">{products.length} items</span>}
-        </div>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {q ? `Results for "${q}"` : category === "all" ? "All Products" : category}
+            </h2>
+            {products.length > 0 && <span className="text-xs text-gray-500">{products.length} items</span>}
+          </div>
 
-        {loading ? (
-          <div className="grid grid-cols-2 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl p-3 h-56 animate-pulse" />
-            ))}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <p className="font-medium">No products found</p>
-            <p className="text-xs mt-1">Try a different category</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {products.map((p) => (
-              <ProductCard key={p._id} product={p} />
-            ))}
-          </div>
-        )}
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl p-3 h-56 animate-pulse" />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">
+              <p className="font-medium">No products found</p>
+              <p className="text-xs mt-1">Try a different category</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {products.map((p) => (
+                <ProductCard key={p._id} product={p} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
