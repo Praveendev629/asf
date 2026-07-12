@@ -39,6 +39,7 @@ export interface IProduct {
   rating: number;
   ratingCount: number;
   isFeatured: boolean;
+  parentId: string;
   variants: IProductVariant[];
   relatedProducts: string[];
   specifications: ISpecification[];
@@ -63,6 +64,7 @@ const ProductSchema = new Schema<IProduct>(
     rating: { type: Number, default: 4.3 },
     ratingCount: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
+    parentId: { type: String, default: "" },
     variants: {
       type: [{
         name: String,

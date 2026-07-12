@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/AuthContext";
 import { CartProvider } from "@/components/CartContext";
 import { WishlistProvider } from "@/components/WishlistContext";
+import SplashGate from "@/components/SplashGate";
 import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
@@ -17,8 +18,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
-              {children}
-              <BottomNav />
+              <SplashGate>
+                {children}
+                <BottomNav />
+              </SplashGate>
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { CheckCircle2, Package, Truck, Home, Phone, Clock, MapPin, Navigation } from "lucide-react";
+import { CheckCircle2, Package, Truck, Home, Phone, Clock, MapPin, Navigation, FileText } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
+import { downloadInvoice } from "@/lib/invoice";
 
 const STAGE_META: Record<string, { label: string; icon: any }> = {
   placed: { label: "Order Placed", icon: CheckCircle2 },
@@ -91,6 +92,21 @@ export default function OrderTrackingPage() {
           </div>
         </div>
       )}
+
+      {/* Invoice Download */}
+      <button
+        onClick={() => downloadInvoice({
+          orderNumber: order.orderNumber, status: order.status,
+          userName: "", userEmail: "", userPhone: "",
+          deliveryAddress: order.deliveryAddress, items: order.items,
+          subtotal: order.items.reduce((s, i) => s + i.price * i.quantity, 0),
+          deliveryFee: order.total - order.items.reduce((s, i) => s + i.price * i.quantity, 0),
+          total: order.total, createdAt: order.createdAt, deliveryPartner: order.deliveryPartner,
+        })}
+        className="w-full bg-gray-100 text-gray-700 font-medium py-3 rounded-xl text-sm flex items-center justify-center gap-2 mb-6 hover:bg-gray-200 transition"
+      >
+        <FileText size={16} /> Download Invoice
+      </button>
 
       <div className="card p-6 mb-6">
         <h2 className="font-semibold text-asf-slateDeep mb-4">Items</h2>

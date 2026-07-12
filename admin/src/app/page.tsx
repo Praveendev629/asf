@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon, Upload, FileText } from "lucide-react";
 import ProductForm from "@/components/ProductForm";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; unitType: string; unitOptions: { label: string; price: number; mrp: number; stock: number }[]; mrp: number; price: number; stock: number; description: string; variants: { name: string; slug: string; price: number; mrp: number; stock: number; image: string; attributes: Record<string, string> }[]; relatedProducts: string[]; specifications: { label: string; value: string; icon: string }[]; productType: string; }
@@ -51,6 +51,13 @@ export default function AdminPage() {
   async function handleDeleteOrder(orderId: string) { if (!confirm("Delete this order? This cannot be undone.")) return; await fetch(`/api/admin/orders/${orderId}`, { method: "DELETE" }); loadOrders(); }
   async function handleDeletePartner(partnerId: string) { if (!confirm("Delete this delivery partner? This cannot be undone.")) return; await fetch(`/api/admin/delivery-partners?id=${partnerId}`, { method: "DELETE" }); loadPartners(); }
   async function handleDeleteUser(userId: string) { if (!confirm("Delete this user and all their data? This cannot be undone.")) return; await fetch(`/api/admin/users?id=${userId}`, { method: "DELETE" }); loadUsers(); }
+  function handleDownloadInvoice(o: Order) {
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice ${o.orderNumber}</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,sans-serif;background:#f9fafb;color:#111827}.inv{max-width:700px;margin:20px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)}.hdr{background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:28px}.hdr h1{font-size:22px;font-weight:700}.hdr p{font-size:12px;opacity:.8;margin-top:2px}.badge{display:inline-block;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:8px;text-transform:uppercase}.ct{padding:28px}.g{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}.ib{background:#f9fafb;border-radius:10px;padding:14px}.ib h3{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:6px}.ib p{font-size:13px;color:#111827}table{width:100%;border-collapse:collapse;margin-bottom:20px}th{background:#f9fafb;padding:8px 10px;font-size:10px;text-transform:uppercase;color:#6b7280;text-align:left;border-bottom:2px solid #e5e7eb}td{padding:8px 10px;font-size:13px;border-bottom:1px solid #e5e7eb}.r{text-align:right}.tot td{font-weight:700;border-top:2px solid #111827;padding-top:10px;font-size:16px}.ft{background:#f9fafb;padding:16px 28px;text-align:center;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb}@media print{body{background:#fff}.inv{box-shadow:none;margin:0}}</style></head><body><div class="inv"><div class="hdr"><h1>ASF Shopee</h1><p>Order Invoice</p><div class="badge">${o.status}</div></div><div class="ct"><div class="g"><div class="ib"><h3>Order</h3><p><strong>#${o.orderNumber}</strong></p><p>${new Date(o.createdAt).toLocaleDateString("en-IN")}</p></div><div class="ib"><h3>Customer</h3><p><strong>${o.userName}</strong></p><p>+91 ${o.userPhone}</p></div></div><table><thead><tr><th>#</th><th>Item</th><th class="r">Qty</th><th class="r">Total</th></tr></thead><tbody>${o.items.map((it,i)=>`<tr><td>${i+1}</td><td>${it.name}</td><td class="r">${it.quantity}</td><td class="r">₹${it.price*it.quantity}</td></tr>`).join("")}</tbody></table><table style="width:250px;margin-left:auto"><tr><td>Subtotal</td><td class="r">₹${o.items.reduce((s,i)=>s+i.price*i.quantity,0)}</td></tr><tr><td>Delivery</td><td class="r">₹${o.total-o.items.reduce((s,i)=>s+i.price*i.quantity,0)}</td></tr><tr class="tot"><td>Total</td><td class="r">₹${o.total}</td></tr></table></div><div class="ft">ASF Shopee — Premium Grocery Delivery</div></div></body></html>`;
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = window.open(url, "_blank");
+    if (a) a.onload = () => a.print();
+  }
 
   const tabs = [
     { key: "products" as const, label: "Products", icon: Package },
@@ -152,8 +159,9 @@ export default function AdminPage() {
                       {partners.filter((p) => p.isAvailable).map((p) => <option key={p._id} value={p._id}>{p.name} ({p.phone})</option>)}
                     </select>
                   </div>
-                  <div className="pt-2 border-t border-asf-mist">
-                    <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o._id); }} className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"><Trash2 size={12} /> Delete Order</button>
+                  <div className="pt-2 border-t border-asf-mist flex gap-3">
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteOrder(o._id); }} className="text-xs text-red-500 hover:text-red-700 font-medium flex items-center gap-1"><Trash2 size={12} /> Delete</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleDownloadInvoice(o); }} className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"><FileText size={12} /> Invoice</button>
                   </div>
                 </div>
               )}

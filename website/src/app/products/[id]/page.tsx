@@ -17,6 +17,7 @@ interface Product {
   relatedProducts: string[];
   specifications: { label: string; value: string; icon: string }[];
   productType: string;
+  parentId: string;
 }
 
 const SPEC_ICONS: Record<string, any> = {
@@ -53,6 +54,7 @@ export default function ProductPage() {
           data.product.relatedProducts = data.product.relatedProducts || [];
           data.product.unitType = data.product.unitType || "none";
           data.product.productType = data.product.productType || "";
+          data.product.parentId = data.product.parentId || "";
           setProduct(data.product);
           if (data.product.relatedProducts.length > 0) {
             Promise.all(data.product.relatedProducts.map((id: string) =>
@@ -164,6 +166,11 @@ export default function ProductPage() {
       {/* Product Info */}
       <div className="max-w-lg mx-auto px-4 mt-4">
         <p className="text-xs text-gray-500 mb-1">{product.category}</p>
+        {product.parentId && (
+          <a href={`/products/${product.parentId}`} className="text-xs text-emerald-600 font-medium mb-2 inline-flex items-center gap-1">
+            ← View all variants
+          </a>
+        )}
         <h1 className="text-lg font-semibold text-gray-900 mb-1">{product.name}</h1>
         <div className="flex items-center gap-2 mb-3">
           <span className="flex items-center gap-1 bg-gray-900 text-white text-xs px-2 py-0.5 rounded-md"><Star size={10} className="fill-white" /> {product.rating.toFixed(1)}</span>
@@ -192,24 +199,23 @@ export default function ProductPage() {
 
         {/* Variant Options */}
         {product.variants.length > 0 && (
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-900 mb-2">Select Variant</p>
-            <div className="grid grid-cols-3 gap-2">
-              {product.variants.map((v, i) => (
-                <button key={i} onClick={() => { setSelectedVariant(i); setActiveImage(0); }} className={`p-3 rounded-xl border-2 text-center transition ${selectedVariant === i ? "border-gray-900 bg-gray-50" : "border-gray-200"}`}>
-                  {v.image && <div className="relative w-12 h-12 mx-auto rounded-lg overflow-hidden mb-1"><Image src={v.image} alt="" fill className="object-cover" /></div>}
-                  <p className="text-xs font-medium truncate">{v.name}</p>
-                  <p className="text-xs font-bold">₹{v.price}</p>
-                </button>
-              ))}
+          <div className="mb-4 py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-gray-900">{product.variants.length} variants available</p>
+              <a href="#variants" className="text-xs text-emerald-600 font-medium">View all</a>
             </div>
-            {selectedVariant !== null && product.variants?.[selectedVariant] && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {Object.entries(product.variants[selectedVariant].attributes).map(([k, val]) => (
-                  <span key={k} className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{k}: {val}</span>
-                ))}
-              </div>
-            )}
+            <div className="flex gap-2 mt-2">
+              {product.variants.slice(0, 4).map((v, i) => (
+                <a key={i} href={`/products/${v.slug}`} className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
+                  {v.image && <Image src={v.image} alt={v.name} width={48} height={48} className="object-cover w-full h-full" />}
+                </a>
+              ))}
+              {product.variants.length > 4 && (
+                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500">
+                  +{product.variants.length - 4}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -256,13 +262,16 @@ export default function ProductPage() {
             <h3 className="text-sm font-medium text-gray-900 mb-3">Available Variants</h3>
             <div className="flex gap-3 overflow-x-auto pb-2">
               {product.variants.map((v, i) => (
-                <div key={i} onClick={() => { setSelectedVariant(i); setActiveImage(0); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="shrink-0 w-28 cursor-pointer rounded-xl border-2 overflow-hidden transition hover:shadow-md">
+                <a key={i} href={`/products/${v.slug}`} className="shrink-0 w-28 rounded-xl border-2 border-gray-200 overflow-hidden hover:border-emerald-500 hover:shadow-md transition">
                   <div className="relative aspect-square bg-gray-50"><Image src={v.image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=200"} alt={v.name} fill className="object-cover" /></div>
                   <div className="p-2 text-center">
                     <p className="text-xs font-medium truncate">{v.name}</p>
                     <p className="text-xs font-bold">₹{v.price}</p>
+                    {Object.keys(v.attributes || {}).length > 0 && (
+                      <p className="text-[9px] text-gray-400 truncate mt-0.5">{Object.entries(v.attributes).map(([k, val]) => val).join(", ")}</p>
+                    )}
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>

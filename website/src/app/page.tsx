@@ -67,48 +67,47 @@ function HomeContent() {
     <div className="min-h-screen bg-gray-50">
       <TopBar />
 
-      {/* Hero Banner Carousel — hidden during search */}
-      {!q && banners.length > 0 && (
+      {/* Banners section — hidden during search */}
+      {!q && (
         <div className="px-4 mb-6">
-          <div className="max-w-6xl mx-auto relative rounded-2xl overflow-hidden" style={{ aspectRatio: "21/9" }}>
-            {banners.map((banner, i) => (
-              <div key={banner._id} className={`absolute inset-0 transition-opacity duration-500 ${i === activeBanner ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <Image src={banner.imageUrl} alt={banner.title} fill className="object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-4 right-4 text-white">
-                  <h2 className="font-display text-lg font-semibold">{banner.title}</h2>
-                  {banner.description && <p className="text-xs text-white/80 mt-1">{banner.description}</p>}
+          <div className="max-w-6xl mx-auto">
+            {/* Update banners carousel */}
+            {banners.length > 0 && (
+              <div className="relative rounded-2xl overflow-hidden mb-3" style={{ aspectRatio: "21/9" }}>
+                {banners.map((banner, i) => (
+                  <div key={banner._id} className={`absolute inset-0 transition-opacity duration-500 ${i === activeBanner ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                    <Image src={banner.imageUrl} alt={banner.title} fill className="object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4 text-white">
+                      <h2 className="font-display text-lg font-semibold">{banner.title}</h2>
+                      {banner.description && <p className="text-xs text-white/80 mt-1">{banner.description}</p>}
+                    </div>
+                  </div>
+                ))}
+                {banners.length > 1 && (
+                  <>
+                    <button onClick={() => setActiveBanner((prev) => (prev - 1 + banners.length) % banners.length)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5"><ChevronLeft size={16} /></button>
+                    <button onClick={() => setActiveBanner((prev) => (prev + 1) % banners.length)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5"><ChevronRight size={16} /></button>
+                  </>
+                )}
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                  {banners.map((_, i) => (
+                    <button key={i} onClick={() => setActiveBanner(i)} className={`w-2 h-2 rounded-full transition ${i === activeBanner ? "bg-white" : "bg-white/50"}`} />
+                  ))}
                 </div>
               </div>
-            ))}
-            {/* Nav arrows */}
-            {banners.length > 1 && (
-              <>
-                <button onClick={() => setActiveBanner((prev) => (prev - 1 + banners.length) % banners.length)} className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5"><ChevronLeft size={16} /></button>
-                <button onClick={() => setActiveBanner((prev) => (prev + 1) % banners.length)} className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-1.5"><ChevronRight size={16} /></button>
-              </>
             )}
-            {/* Dots */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {banners.map((_, i) => (
-                <button key={i} onClick={() => setActiveBanner(i)} className={`w-2 h-2 rounded-full transition ${i === activeBanner ? "bg-white" : "bg-white/50"}`} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Default banner — hidden during search */}
-      {!q && banners.length === 0 && (
-        <div className="px-4 mb-6">
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-6 text-white relative overflow-hidden">
-            <div className="relative z-10">
-              <p className="text-xs font-medium text-emerald-100">Welcome to ASF Shopee</p>
-              <h2 className="font-display text-xl font-semibold mt-1">Fresh groceries, delivered fast.</h2>
-              <p className="text-xs text-emerald-100 mt-2">Curated products with premium care.</p>
-            </div>
-            <div className="absolute right-0 top-0 w-32 h-32 opacity-20">
-              <Image src="/logo.png" alt="" fill className="object-contain" />
+            {/* ASF Welcome Banner — always visible */}
+            <div className="rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 p-5 text-white relative overflow-hidden">
+              <div className="relative z-10">
+                <p className="text-[10px] font-medium text-emerald-100 uppercase tracking-wider">Welcome to ASF Shopee</p>
+                <h2 className="font-display text-xl font-bold mt-1">Fresh groceries, delivered fast.</h2>
+                <p className="text-xs text-emerald-100 mt-1.5">Curated products with premium care. Order now!</p>
+              </div>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-20 h-20 opacity-20">
+                <Image src="/logo.png" alt="" fill className="object-contain" />
+              </div>
             </div>
           </div>
         </div>

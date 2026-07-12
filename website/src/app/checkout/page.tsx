@@ -73,7 +73,7 @@ export default function CheckoutPage() {
         </div>
       </div>
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-      <button onClick={handlePlaceOrder} disabled={placing} className="btn-primary w-full flex items-center justify-center gap-2">
+      <button onClick={handlePlaceOrder} disabled={placing} className="w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20">
         <PackageCheck size={18} />{placing ? "Placing order..." : `Place Order · ₹${total}`}
       </button>
     </div>

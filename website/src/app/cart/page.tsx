@@ -46,7 +46,7 @@ export default function CartPage() {
           <div className="flex justify-between"><span className="text-asf-slate">Delivery fee</span><span>{deliveryFee === 0 ? "Free" : `₹${deliveryFee}`}</span></div>
         </div>
         <div className="flex justify-between font-semibold text-lg border-t border-asf-mist pt-4 mb-6"><span>Total</span><span>₹{subtotal + deliveryFee}</span></div>
-        <button onClick={handleCheckout} className="btn-primary w-full">Proceed to Checkout</button>
+        <button onClick={handleCheckout} className="w-full bg-emerald-600 text-white font-semibold py-3.5 rounded-xl text-sm hover:bg-emerald-700 transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">Proceed to Checkout</button>
       </div>
     </div>
   );

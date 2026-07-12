@@ -10,7 +10,7 @@ export default function SplashGate({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const seen = sessionStorage.getItem("asf_splash_seen");
     if (seen) { setShowSplash(false); return; }
-    const timer = setTimeout(() => { setShowSplash(false); sessionStorage.setItem("asf_splash_seen", "1"); }, 1900);
+    const timer = setTimeout(() => { setShowSplash(false); sessionStorage.setItem("asf_splash_seen", "1"); }, 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -18,11 +18,44 @@ export default function SplashGate({ children }: { children: React.ReactNode }) 
     <>
       <AnimatePresence>
         {showSplash && (
-          <motion.div initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6, ease: "easeInOut" }} className="fixed inset-0 z-[100] flex items-center justify-center bg-asf-slateDeep">
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.9, ease: "easeOut" }} className="flex flex-col items-center gap-4">
-              <div className="relative w-28 h-28 sm:w-36 sm:h-36"><Image src="/logo.png" alt="ASF" fill className="object-contain" priority /></div>
-              <motion.p initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.6 }} className="text-asf-cream/70 tracking-[0.3em] text-xs uppercase font-medium">Premium Grocery, Delivered</motion.p>
-            </motion.div>
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-gradient-to-br from-emerald-600 to-emerald-800"
+          >
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="relative w-24 h-24 mx-auto mb-4"
+              >
+                <Image src="/logo.png" alt="ASF" fill className="object-contain" priority />
+              </motion.div>
+              <motion.h1
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-white font-bold text-2xl"
+              >
+                ASF Shopee
+              </motion.h1>
+              <motion.p
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+                className="text-emerald-100 text-xs mt-2"
+              >
+                Premium Grocery, Delivered Fast
+              </motion.p>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: 120 }}
+                transition={{ delay: 0.7, duration: 1, ease: "easeInOut" }}
+                className="h-1 bg-white/30 rounded-full mx-auto mt-6"
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
