@@ -112,9 +112,6 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3">
                   <p className="font-semibold">₹{o.total}</p>
                   <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${STAGE_COLORS[o.status] || "bg-gray-100 text-gray-700"}`}>{o.status.replace(/_/g, " ")}</span>
-                  <select value={o.status} onChange={(e) => { e.stopPropagation(); handleStatusChange(o._id, e.target.value); }} onClick={(e) => e.stopPropagation()} className="border border-asf-mist rounded-xl px-3 py-2 text-sm">
-                    {STAGES.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-                  </select>
                   {expandedOrder === o._id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                 </div>
               </div>

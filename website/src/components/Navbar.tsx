@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { ShoppingCart, User, LogOut, LayoutDashboard, Search, ClipboardList } from "lucide-react";
+import { ShoppingCart, User, LogOut, LayoutDashboard, Search, ClipboardList, Heart } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import { useCart } from "@/components/CartContext";
 import { useRouter } from "next/navigation";
@@ -45,6 +45,9 @@ export default function Navbar() {
               <ClipboardList size={18} /> Orders
             </Link>
           )}
+          <Link href="/wishlist" className="relative">
+            <Heart size={20} className="text-asf-slateDeep" />
+          </Link>
           <Link href="/cart" className="relative">
             <ShoppingCart size={22} className="text-asf-slateDeep" />
             {count > 0 && <span className="absolute -top-2 -right-2 bg-asf-copper text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">{count}</span>}

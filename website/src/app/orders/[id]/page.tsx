@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { CheckCircle2, Package, Truck, Home, Phone, Clock, MapPin, Navigation } from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
@@ -93,8 +94,19 @@ export default function OrderTrackingPage() {
 
       <div className="card p-6 mb-6">
         <h2 className="font-semibold text-asf-slateDeep mb-4">Items</h2>
-        <div className="space-y-2 text-sm">
-          {order.items.map((item, i) => <div key={i} className="flex justify-between"><span>{item.name} x {item.quantity}</span><span>₹{item.price * item.quantity}</span></div>)}
+        <div className="space-y-3">
+          {order.items.map((item, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-asf-mist shrink-0">
+                <Image src={item.image || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=100"} alt={item.name} fill className="object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-asf-slateDeep truncate">{item.name}</p>
+                <p className="text-xs text-asf-slate">× {item.quantity}</p>
+              </div>
+              <span className="text-sm font-medium shrink-0">₹{item.price * item.quantity}</span>
+            </div>
+          ))}
         </div>
         <div className="border-t border-asf-mist mt-4 pt-3 flex justify-between font-semibold"><span>Total</span><span>₹{order.total}</span></div>
       </div>
