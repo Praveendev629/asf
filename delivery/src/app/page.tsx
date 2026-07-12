@@ -32,12 +32,14 @@ export default function DeliveryDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  const ts = () => `_t=${Date.now()}`;
+
   async function loadOrders(token: string) {
     setLoading(true);
     try {
       const [availRes, myRes] = await Promise.all([
-        fetch("/api/delivery/orders", { headers: { Authorization: `Bearer ${token}` } }),
-        fetch("/api/delivery/orders?filter=my", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/delivery/orders?${ts()}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
+        fetch(`/api/delivery/orders?filter=my&${ts()}`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }),
       ]);
       if (availRes.ok) { const data = await availRes.json(); setAvailableOrders(data.orders || []); }
       if (myRes.ok) { const data = await myRes.json(); setMyOrders(data.orders || []); }
@@ -64,8 +66,26 @@ export default function DeliveryDashboard() {
   }
 
   function handleLogout() { localStorage.removeItem("delivery_token"); localStorage.removeItem("delivery_partner"); router.push("/login"); }
+
   function openNavigation(destLat: number, destLng: number) {
-    if (navigator.geolocation) navigator.geolocation.getCurrentPosition((pos) => { window.open(`https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}&destination=${destLat},${destLng}&travelmode=driving`, "_blank"); });
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const url = `https://www.google.com/maps/dir/?api=1&origin=${pos.coords.latitude},${pos.coords.longitude}&destination=${destLat},${destLng}&travelmode=driving`;
+          window.open(url, "_blank");
+        },
+        () => {
+          // GPS failed — open maps with destination only
+          const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+          window.open(url, "_blank");
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      // No geolocation support — open maps with destination only
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
+      window.open(url, "_blank");
+    }
   }
 
   const displayOrders = activeTab === "available" ? availableOrders : myOrders;

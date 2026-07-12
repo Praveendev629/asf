@@ -23,16 +23,17 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 5000);
+    const interval = setInterval(() => loadAll(), 5000);
     return () => clearInterval(interval);
   }, []);
 
+  const ts = () => `_t=${Date.now()}`;
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners()]); }
   async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
-  async function loadProducts() { const res = await fetch("/api/products", { cache: "no-store" }); const data = await res.json(); setProducts(data.products || []); }
-  async function loadOrders() { const res = await fetch("/api/admin/orders", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
-  async function loadUsers() { const res = await fetch("/api/admin/users", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
-  async function loadPartners() { const res = await fetch("/api/admin/delivery-partners", { cache: "no-store" }); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
+  async function loadProducts() { const res = await fetch(`/api/products?${ts()}`, { cache: "no-store" }); const data = await res.json(); setProducts(data.products || []); }
+  async function loadOrders() { const res = await fetch(`/api/admin/orders?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
+  async function loadUsers() { const res = await fetch(`/api/admin/users?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
+  async function loadPartners() { const res = await fetch(`/api/admin/delivery-partners?${ts()}`, { cache: "no-store" }); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
   async function handleDelete(id: string) { if (!confirm("Delete this product?")) return; await fetch(`/api/products/${id}`, { method: "DELETE" }); loadProducts(); }
   async function handleStatusChange(orderId: string, status: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }); loadOrders(); }
   async function handlePhoneUpdate(orderId: string, phone: string) { await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userPhone: phone }) }); loadOrders(); }

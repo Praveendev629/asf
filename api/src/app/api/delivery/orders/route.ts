@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongodb";
 import Order from "@/lib/models/Order";
 import { requireDeliveryPartner } from "@/lib/deliveryAuth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const partner = await requireDeliveryPartner(req);
@@ -13,10 +15,8 @@ export async function GET(req: NextRequest) {
     let query: Record<string, unknown>;
 
     if (filter === "my") {
-      // Show orders assigned to this partner (by email match)
       query = { "deliveryPartner.email": partner.email };
     } else {
-      // Show available orders: no partner assigned yet, still in placed status
       query = {
         status: "placed",
         $or: [
@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
     }
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
-    return NextResponse.json({ orders });
+    return NextResponse.json({ orders }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    });
   } catch (err: any) {
     const status = err.message === "UNAUTHENTICATED" ? 401 : 500;
     return NextResponse.json({ error: err.message }, { status });
