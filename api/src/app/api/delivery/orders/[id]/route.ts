@@ -5,6 +5,7 @@ import DeliveryPartner from "@/lib/models/DeliveryPartner";
 import { requireDeliveryPartner } from "@/lib/deliveryAuth";
 import { haversineDistance, estimateDeliveryMinutes, formatETA } from "@/lib/distance";
 import { notifyOrderStatusUpdate } from "@/lib/notifications";
+import { notifyAdminOrderDelivered } from "@/lib/adminNotifications";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -70,6 +71,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Send push notification to customer
     if (notifyStatus) {
       await notifyOrderStatusUpdate(String(order._id), notifyStatus);
+    }
+
+    // Notify admin when order is delivered
+    if (notifyStatus === "delivered") {
+      await notifyAdminOrderDelivered(order.orderNumber, order.total);
     }
 
     return NextResponse.json({ order });

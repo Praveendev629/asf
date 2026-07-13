@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import DeliveryPartner from "@/lib/models/DeliveryPartner";
 import bcrypt from "bcryptjs";
 import { signDeliveryToken } from "@/lib/deliveryAuth";
+import { notifyAdminNewDeliveryPartner } from "@/lib/adminNotifications";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +17,10 @@ export async function POST(req: NextRequest) {
     const hashed = await bcrypt.hash(password, 10);
     const partner = await DeliveryPartner.create({ name, phone, email: email.toLowerCase(), password: hashed });
     const token = signDeliveryToken({ partnerId: String(partner._id), email: partner.email });
+
+    // Notify admin about new delivery partner
+    await notifyAdminNewDeliveryPartner(name, phone);
+
     return NextResponse.json({ token, partner: { _id: partner._id, name: partner.name, phone: partner.phone, email: partner.email } }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
