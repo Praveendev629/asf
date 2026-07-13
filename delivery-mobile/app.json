@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "ASF Delivery",
+    "slug": "asf-delivery",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": { "backgroundColor": "#111827" },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.asf.delivery" },
+    "android": {
+      "adaptiveIcon": { "backgroundColor": "#111827" },
+      "package": "com.asf.delivery"
+    },
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/notification-icon.png", "color": "#111827" }]
+    ],
+    "extra": {
+      "apiUrl": "https://asf-api-five.vercel.app",
+      "eas": { "projectId": "your-eas-project-id" }
+    },
+    "owner": "praveenseenu6289"
+  }
+}

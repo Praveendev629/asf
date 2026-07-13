@@ -32,6 +32,10 @@
       ]
     ],
     "extra": {
+      "apiUrl": "https://asf-api-five.vercel.app",
+      "googleWebClientId": "436850366160-3c8s850qoo5gapce5e3sqr8959fid4iv.apps.googleusercontent.com",
+      "googleAndroidClientId": "436850366160-f52nb4ap0qj07l244vtrd8v3frga39tj.apps.googleusercontent.com",
+      "googleIosClientId": "",
       "eas": {
         "projectId": "cb628aa9-8306-431e-942d-8cfccfcce85c"
       }

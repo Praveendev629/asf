@@ -4,6 +4,7 @@ import Order from "@/lib/models/Order";
 import Product from "@/lib/models/Product";
 import User from "@/lib/models/User";
 import { requireUser } from "@/lib/auth";
+import { notifyAllDeliveryPartners } from "@/lib/deliveryNotifications";
 
 function generateOrderNumber() {
   return `ASF${Date.now().toString().slice(-8)}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -67,6 +68,9 @@ export async function POST(req: NextRequest) {
       status: "placed",
       statusHistory: [{ status: "placed", at: new Date() }],
     });
+
+    // Notify all available delivery partners about new order
+    await notifyAllDeliveryPartners(String(order._id), order.orderNumber, order.total);
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (err: any) {

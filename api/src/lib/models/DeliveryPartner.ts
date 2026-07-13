@@ -8,6 +8,7 @@ export interface IDeliveryPartner {
   password: string;
   isAvailable: boolean;
   currentLocation?: { lat: number; lng: number };
+  fcmTokens: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,6 +21,7 @@ const DeliveryPartnerSchema = new Schema<IDeliveryPartner>(
     password: { type: String, required: true },
     isAvailable: { type: Boolean, default: true },
     currentLocation: { lat: Number, lng: Number },
+    fcmTokens: { type: [String], default: [] },
   },
   { timestamps: true }
 );
