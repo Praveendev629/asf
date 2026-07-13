@@ -4,6 +4,7 @@ import Order, { ORDER_STAGES } from "@/lib/models/Order";
 import DeliveryPartner from "@/lib/models/DeliveryPartner";
 import { requireDeliveryPartner } from "@/lib/deliveryAuth";
 import { haversineDistance, estimateDeliveryMinutes, formatETA } from "@/lib/distance";
+import { notifyOrderStatusUpdate } from "@/lib/notifications";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -26,6 +27,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const order = await Order.findById(params.id);
     if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    let notifyStatus: string | null = null;
+
     if (body.action === "accept") {
       const partner = await DeliveryPartner.findById(partnerData.partnerId);
       if (!partner) return NextResponse.json({ error: "Partner not found" }, { status: 404 });
@@ -46,9 +49,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
       order.status = "confirmed";
       order.statusHistory.push({ status: "confirmed", at: new Date() });
+      notifyStatus = "confirmed";
     } else if (body.status && ORDER_STAGES.includes(body.status)) {
       order.status = body.status;
       order.statusHistory.push({ status: body.status, at: new Date() });
+      notifyStatus = body.status;
 
       if (body.lat && body.lng && order.deliveryAddress?.lat && order.deliveryAddress?.lng) {
         const dist = haversineDistance(body.lat, body.lng, order.deliveryAddress.lat, order.deliveryAddress.lng);
@@ -61,6 +66,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     await order.save();
+
+    // Send push notification to customer
+    if (notifyStatus) {
+      await notifyOrderStatusUpdate(String(order._id), notifyStatus);
+    }
+
     return NextResponse.json({ order });
   } catch (err: any) {
     const status = err.message === "UNAUTHENTICATED" ? 401 : 500;

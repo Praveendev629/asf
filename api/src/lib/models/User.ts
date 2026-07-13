@@ -17,6 +17,7 @@ export interface IUser {
     lng?: number;
   };
   onboardingComplete: boolean;
+  fcmTokens: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -38,6 +39,7 @@ const UserSchema = new Schema<IUser>(
       lng: Number,
     },
     onboardingComplete: { type: Boolean, default: false },
+    fcmTokens: { type: [String], default: [] },
   },
   { timestamps: true }
 );

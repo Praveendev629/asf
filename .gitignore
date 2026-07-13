@@ -2,6 +2,37 @@ node_modules
 .next
 .env
 .env.local
+.env*.local
 .vercel
 *.log
 .DS_Store
+
+# Mobile app
+mobile/node_modules
+mobile/.expo
+mobile/android
+mobile/ios
+mobile/web-build
+mobile/google-services.json
+mobile/*.keystore
+mobile/*.jks
+
+# API
+api/node_modules
+api/.next
+api/.env
+
+# Website
+website/node_modules
+website/.next
+
+# Admin
+admin/node_modules
+admin/.next
+
+# Delivery
+delivery/node_modules
+delivery/.next
+
+# Lock files (optional - keep if you want)
+# package-lock.json
