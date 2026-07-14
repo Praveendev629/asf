@@ -3,29 +3,47 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "../lib/storage";
 import { apiFetchAuth } from "../lib/api";
+import { COLORS, STAGE_META, STAGE_ORDER } from "../lib/theme";
 
-const STAGE_LABELS: Record<string, string> = { placed: "Placed", confirmed: "Confirmed", packed: "Packed", dispatched: "Dispatched", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
-const STAGE_COLORS: Record<string, string> = { placed: "#3b82f6", confirmed: "#6366f1", packed: "#f59e0b", dispatched: "#a855f7", out_for_delivery: "#f97316", delivered: "#22c55e" };
-
-interface Order { _id: string; orderNumber: string; status: string; total: number; items: { name: string; quantity: number }[]; createdAt: string; }
+interface Order {
+  _id: string; orderNumber: string; status: string; total: number;
+  items: { name: string; quantity: number; image: string; price: number }[];
+  deliveryPartner?: { name: string; phone: string };
+  createdAt: string;
+}
 
 export default function OrdersScreen({ navigation }: any) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAuth().then(({ token }) => {
+    let interval: ReturnType<typeof setInterval>;
+    async function fetchOrders() {
+      const { token } = await getAuth();
       if (token) {
-        apiFetchAuth("/api/orders", token).then((r) => r.json()).then((d) => setOrders(d.orders || []));
+        apiFetchAuth("/api/orders", token).then((r) => r.json()).then((d) => {
+          setOrders(d.orders || []);
+          setLoading(false);
+        });
       }
-    });
+    }
+    fetchOrders();
+    interval = setInterval(fetchOrders, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  if (loading) {
+    return <View style={styles.empty}><Text style={{ color: COLORS.textMuted }}>Loading your orders...</Text></View>;
+  }
 
   if (orders.length === 0) {
     return (
       <View style={styles.empty}>
-        <Ionicons name="receipt-outline" size={64} color="#d1d5db" />
-        <Text style={styles.emptyText}>No orders yet</Text>
-        <Link onPress={() => navigation.navigate("Home")}>Start shopping</Link>
+        <Ionicons name="cart-outline" size={64} color={COLORS.border} />
+        <Text style={styles.emptyTitle}>No orders yet</Text>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
+          <Text style={styles.emptyLink}>Start shopping</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -33,50 +51,77 @@ export default function OrdersScreen({ navigation }: any) {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>My Orders</Text>
-      <FlatList data={orders} keyExtractor={(i) => i._id} contentContainerStyle={{ padding: 16, gap: 12 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("OrderDetail", { id: item._id })}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.orderNum}>#{item.orderNumber}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: STAGE_COLORS[item.status] || "#9ca3af" }]}>
-                <Text style={styles.statusText}>{STAGE_LABELS[item.status] || item.status}</Text>
+      <FlatList
+        data={orders}
+        keyExtractor={(i) => i._id}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => {
+          const currentIndex = STAGE_ORDER.indexOf(item.status);
+          const stageMeta = STAGE_META[item.status] || STAGE_META.placed;
+          return (
+            <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("OrderDetail", { id: item._id })} activeOpacity={0.7}>
+              {/* Header */}
+              <View style={styles.cardHeader}>
+                <View>
+                  <Text style={styles.orderNum}>#{item.orderNumber}</Text>
+                  <Text style={styles.orderDate}>{new Date(item.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: stageMeta.bgColor }]}>
+                  <Text style={[styles.statusText, { color: stageMeta.color }]}>{stageMeta.label}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.cardItems}>
-              {item.items.slice(0, 2).map((it, i) => (
-                <Text key={i} style={styles.itemText}>{it.name} × {it.quantity}</Text>
-              ))}
-              {item.items.length > 2 && <Text style={styles.moreText}>+{item.items.length - 2} more</Text>}
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.total}>₹{item.total}</Text>
-              <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+
+              {/* Items */}
+              <View style={styles.cardItems}>
+                {item.items.slice(0, 3).map((it, i) => (
+                  <Text key={i} style={styles.itemText}>{it.name} × {it.quantity}</Text>
+                ))}
+                {item.items.length > 3 && <Text style={styles.moreText}>+{item.items.length - 3} more</Text>}
+              </View>
+
+              {/* Footer */}
+              <View style={styles.cardFooter}>
+                <Text style={styles.total}>₹{item.total}</Text>
+                {item.deliveryPartner && (
+                  <Text style={styles.deliveryPartner}>
+                    <Ionicons name="car-outline" size={12} /> {item.deliveryPartner.name}
+                  </Text>
+                )}
+              </View>
+
+              {/* Progress Bar */}
+              <View style={styles.progressBar}>
+                {STAGE_ORDER.map((stage, i) => (
+                  <View key={stage} style={[styles.progressSegment, i <= currentIndex ? { backgroundColor: COLORS.primary } : { backgroundColor: COLORS.border }]} />
+                ))}
+              </View>
+            </TouchableOpacity>
+          );
+        }}
       />
     </View>
   );
 }
 
-function Link({ onPress, children }: { onPress: () => void; children: React.ReactNode }) {
-  return <TouchableOpacity onPress={onPress}><Text style={{ color: "#059669", fontWeight: "600" }}>{children}</Text></TouchableOpacity>;
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
-  empty: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f9fafb", gap: 12 },
-  emptyText: { fontSize: 16, color: "#9ca3af" },
-  title: { fontSize: 20, fontWeight: "bold", padding: 16, color: "#111827" },
-  card: { backgroundColor: "white", borderRadius: 16, padding: 16 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  orderNum: { fontSize: 15, fontWeight: "600", color: "#111827" },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  empty: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background, gap: 12 },
+  emptyTitle: { fontSize: 20, fontWeight: "600", color: COLORS.text },
+  emptyLink: { color: COLORS.primary, fontWeight: "600", fontSize: 14 },
+  title: { fontSize: 22, fontWeight: "700", padding: 16, paddingBottom: 8, color: COLORS.text },
+  list: { padding: 16, gap: 12 },
+  card: { backgroundColor: COLORS.white, borderRadius: 16, padding: 16 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 },
+  orderNum: { fontSize: 15, fontWeight: "600", color: COLORS.text },
+  orderDate: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  statusText: { color: "white", fontSize: 11, fontWeight: "600" },
-  cardItems: { gap: 4, marginBottom: 8 },
-  itemText: { fontSize: 13, color: "#6b7280" },
-  moreText: { fontSize: 12, color: "#9ca3af" },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#f3f4f6", paddingTop: 8 },
-  total: { fontSize: 16, fontWeight: "bold" },
-  date: { fontSize: 12, color: "#9ca3af" },
+  statusText: { fontSize: 11, fontWeight: "600" },
+  cardItems: { gap: 4, marginBottom: 10 },
+  itemText: { fontSize: 13, color: COLORS.textSecondary },
+  moreText: { fontSize: 12, color: COLORS.textMuted },
+  cardFooter: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: COLORS.borderLight, paddingTop: 10 },
+  total: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  deliveryPartner: { fontSize: 12, color: COLORS.green },
+  progressBar: { flexDirection: "row", gap: 3, marginTop: 12 },
+  progressSegment: { flex: 1, height: 4, borderRadius: 2 },
 });

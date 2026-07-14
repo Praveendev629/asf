@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "../lib/storage";
 import { apiFetchAuth } from "../lib/api";
+import { COLORS, STAGE_META, STAGE_ORDER } from "../lib/theme";
 
 interface Order {
   _id: string; orderNumber: string; status: string; total: number;
@@ -12,47 +13,62 @@ interface Order {
   createdAt: string;
 }
 
-const STAGES = ["placed", "confirmed", "packed", "dispatched", "out_for_delivery", "delivered"];
-
 export default function OrderDetailScreen({ route }: any) {
   const { id } = route.params;
   const [order, setOrder] = useState<Order | null>(null);
 
   useEffect(() => {
-    getAuth().then(({ token }) => {
+    let interval: ReturnType<typeof setInterval>;
+    async function fetchOrder() {
+      const { token } = await getAuth();
       if (token) {
         apiFetchAuth(`/api/orders/${id}`, token).then((r) => r.json()).then((d) => setOrder(d.order));
       }
-    });
-    const interval = setInterval(() => {
-      getAuth().then(({ token }) => {
-        if (token) apiFetchAuth(`/api/orders/${id}`, token).then((r) => r.json()).then((d) => setOrder(d.order));
-      });
-    }, 5000);
+    }
+    fetchOrder();
+    interval = setInterval(fetchOrder, 5000);
     return () => clearInterval(interval);
   }, [id]);
 
-  if (!order) return <View style={styles.center}><Text>Loading...</Text></View>;
-
-  const currentIndex = STAGES.indexOf(order.status);
+  if (!order) return <View style={styles.center}><Text style={{ color: COLORS.textMuted }}>Loading order...</Text></View>;
+  const currentIndex = STAGE_ORDER.indexOf(order.status);
+  const stageMeta = STAGE_META[order.status] || STAGE_META.placed;
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Order #{order.orderNumber}</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Confirmation Header */}
+      <View style={styles.confirmHeader}>
+        <Ionicons name="checkmark-circle" size={56} color={COLORS.primary} />
+        <Text style={styles.confirmTitle}>Order Confirmed!</Text>
+        <Text style={styles.confirmSub}>#{order.orderNumber}</Text>
+      </View>
 
-      {/* Progress */}
+      {/* ETA Banner */}
+      {order.deliveryPartner?.eta && order.status !== "delivered" && (
+        <View style={styles.etaBanner}>
+          <View style={styles.etaIcon}><Ionicons name="time" size={24} color="#92400e" /></View>
+          <View>
+            <Text style={styles.etaLabel}>Estimated Delivery</Text>
+            <Text style={styles.etaTime}>{order.deliveryPartner.eta}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Order Progress */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Order Progress</Text>
-        {STAGES.map((stage, i) => {
+        {STAGE_ORDER.map((stage, i) => {
+          const meta = STAGE_META[stage] || STAGE_META.placed;
           const done = i <= currentIndex;
           return (
             <View key={stage} style={styles.progressRow}>
-              <View style={[styles.dot, done ? styles.dotActive : styles.dotInactive]}>
-                {done && <Ionicons name="checkmark" size={12} color="white" />}
+              <View style={styles.progressLeft}>
+                <View style={[styles.progressDot, done ? { backgroundColor: COLORS.primary } : { backgroundColor: COLORS.border }]}>
+                  {done && <Ionicons name="checkmark" size={12} color={COLORS.white} />}
+                </View>
+                {i < STAGE_ORDER.length - 1 && <View style={[styles.progressLine, i < currentIndex ? { backgroundColor: COLORS.primary } : { backgroundColor: COLORS.border }]} />}
               </View>
-              <Text style={[styles.stageText, done ? styles.stageDone : styles.stagePending]}>
-                {stage.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-              </Text>
+              <Text style={[styles.stageLabel, done ? { color: COLORS.text, fontWeight: "600" } : { color: COLORS.textMuted }]}>{meta.label}</Text>
             </View>
           );
         })}
@@ -62,8 +78,16 @@ export default function OrderDetailScreen({ route }: any) {
       {order.deliveryPartner && (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Delivery Partner</Text>
-          <Text style={styles.infoText}>{order.deliveryPartner.name} · +91 {order.deliveryPartner.phone}</Text>
-          {order.deliveryPartner.eta && <Text style={styles.eta}>ETA: {order.deliveryPartner.eta}</Text>}
+          <View style={styles.partnerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.partnerName}>{order.deliveryPartner.name}</Text>
+              {order.deliveryPartner.eta && <Text style={styles.partnerEta}>ETA: {order.deliveryPartner.eta}</Text>}
+            </View>
+            <TouchableOpacity style={styles.callBtn} onPress={() => Linking.openURL(`tel:${order.deliveryPartner!.phone}`)}>
+              <Ionicons name="call" size={14} color={COLORS.white} />
+              <Text style={styles.callBtnText}>Call</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -88,34 +112,46 @@ export default function OrderDetailScreen({ route }: any) {
 
       {/* Address */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Delivering to</Text>
-        <Text style={styles.infoText}>{order.deliveryAddress.line1}, {order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</Text>
+        <View style={styles.cardHeader}>
+          <Ionicons name="location" size={16} color={COLORS.primary} />
+          <Text style={styles.cardTitle}>Delivering to</Text>
+        </View>
+        <Text style={styles.addressText}>{order.deliveryAddress.line1}, {order.deliveryAddress.city}, {order.deliveryAddress.state} - {order.deliveryAddress.pincode}</Text>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb" },
+  container: { flex: 1, backgroundColor: COLORS.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 20, fontWeight: "bold", padding: 16, color: "#111827" },
-  card: { backgroundColor: "white", borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12 },
-  cardTitle: { fontSize: 16, fontWeight: "600", color: "#111827", marginBottom: 12 },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
-  dot: { width: 24, height: 24, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  dotActive: { backgroundColor: "#059669" },
-  dotInactive: { backgroundColor: "#e5e7eb" },
-  stageText: { fontSize: 14 },
-  stageDone: { color: "#111827", fontWeight: "500" },
-  stagePending: { color: "#9ca3af" },
-  infoText: { fontSize: 14, color: "#6b7280" },
-  eta: { fontSize: 14, color: "#f59e0b", fontWeight: "600", marginTop: 4 },
+  confirmHeader: { alignItems: "center", paddingVertical: 24 },
+  confirmTitle: { fontSize: 22, fontWeight: "700", color: COLORS.text, marginTop: 8 },
+  confirmSub: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
+  etaBanner: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a", borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12 },
+  etaIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: "#fef3c7", justifyContent: "center", alignItems: "center" },
+  etaLabel: { fontSize: 13, color: "#92400e", fontWeight: "500" },
+  etaTime: { fontSize: 22, fontWeight: "700", color: "#78350f" },
+  card: { backgroundColor: COLORS.white, borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontWeight: "600", color: COLORS.text, marginBottom: 12 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  progressRow: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
+  progressLeft: { alignItems: "center", width: 24 },
+  progressDot: { width: 24, height: 24, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  progressLine: { width: 2, flex: 1, minHeight: 24, marginTop: 4 },
+  stageLabel: { fontSize: 14, paddingBottom: 12 },
+  partnerRow: { flexDirection: "row", alignItems: "center" },
+  partnerName: { fontSize: 15, fontWeight: "600", color: COLORS.text },
+  partnerEta: { fontSize: 13, color: COLORS.amber, fontWeight: "500", marginTop: 4 },
+  callBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  callBtnText: { color: COLORS.white, fontSize: 13, fontWeight: "600" },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
-  itemImage: { width: 48, height: 48, borderRadius: 8, backgroundColor: "#f3f4f6" },
-  itemName: { fontSize: 14, fontWeight: "500" },
-  itemQty: { fontSize: 12, color: "#9ca3af" },
-  itemPrice: { fontSize: 14, fontWeight: "600" },
-  totalRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#f3f4f6", paddingTop: 12 },
-  totalLabel: { fontSize: 16, fontWeight: "bold" },
-  totalValue: { fontSize: 16, fontWeight: "bold" },
+  itemImage: { width: 48, height: 48, borderRadius: 8, backgroundColor: COLORS.borderLight },
+  itemName: { fontSize: 14, fontWeight: "500", color: COLORS.text },
+  itemQty: { fontSize: 12, color: COLORS.textMuted },
+  itemPrice: { fontSize: 14, fontWeight: "600", color: COLORS.text },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: COLORS.borderLight, paddingTop: 12, marginTop: 4 },
+  totalLabel: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  totalValue: { fontSize: 16, fontWeight: "700", color: COLORS.text },
+  addressText: { fontSize: 14, color: COLORS.textSecondary, lineHeight: 20 },
 });

@@ -5,10 +5,14 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "./src/lib/storage";
 import { registerForPushNotifications, setupNotificationListeners } from "./src/lib/notifications";
+import { CartProvider } from "./src/lib/CartContext";
+import { WishlistProvider } from "./src/lib/WishlistContext";
+import { COLORS } from "./src/lib/theme";
 
 import HomeScreen from "./src/screens/HomeScreen";
 import ProductScreen from "./src/screens/ProductScreen";
 import CartScreen from "./src/screens/CartScreen";
+import WishlistScreen from "./src/screens/WishlistScreen";
 import CheckoutScreen from "./src/screens/CheckoutScreen";
 import OrdersScreen from "./src/screens/OrdersScreen";
 import OrderDetailScreen from "./src/screens/OrderDetailScreen";
@@ -27,17 +31,21 @@ function HomeTabs() {
           let iconName: keyof typeof Ionicons.glyphMap = "home";
           if (route.name === "Home") iconName = "home";
           else if (route.name === "Cart") iconName = "cart";
+          else if (route.name === "Wishlist") iconName = "heart";
           else if (route.name === "Orders") iconName = "receipt";
           else if (route.name === "Account") iconName = "person";
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#059669",
-        tabBarInactiveTintColor: "#9ca3af",
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textMuted,
         headerShown: false,
+        tabBarStyle: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: 4, height: 56 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "500" },
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Cart" component={CartScreen} />
+      <Tab.Screen name="Wishlist" component={WishlistScreen} />
       <Tab.Screen name="Orders" component={OrdersScreen} />
       <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
@@ -66,20 +74,24 @@ export default function App() {
   if (isLoggedIn === null) return null;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!isLoggedIn ? (
-          <Stack.Screen name="Login" component={LoginScreen} />
-        ) : (
-          <>
-            <Stack.Screen name="Main" component={HomeTabs} />
-            <Stack.Screen name="Product" component={ProductScreen} />
-            <Stack.Screen name="Checkout" component={CheckoutScreen} />
-            <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <CartProvider>
+      <WishlistProvider>
+        <NavigationContainer>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!isLoggedIn ? (
+              <Stack.Screen name="Login" component={LoginScreen} />
+            ) : (
+              <>
+                <Stack.Screen name="Main" component={HomeTabs} />
+                <Stack.Screen name="Product" component={ProductScreen} />
+                <Stack.Screen name="Checkout" component={CheckoutScreen} />
+                <Stack.Screen name="OrderDetail" component={OrderDetailScreen} />
+                <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              </>
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </WishlistProvider>
+    </CartProvider>
   );
 }
