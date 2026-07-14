@@ -29,7 +29,8 @@
           "icon": "./assets/notification-icon.png",
           "color": "#059669"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "extra": {
       "apiUrl": "https://asf-api-five.vercel.app",
