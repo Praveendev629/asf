@@ -5,6 +5,7 @@ import Product from "@/lib/models/Product";
 import User from "@/lib/models/User";
 import { requireUser } from "@/lib/auth";
 import { notifyAllDeliveryPartners } from "@/lib/deliveryNotifications";
+import { notifyAdminNewOrder } from "@/lib/adminNotifications";
 
 function generateOrderNumber() {
   return `ASF${Date.now().toString().slice(-8)}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -71,6 +72,9 @@ export async function POST(req: NextRequest) {
 
     // Notify all available delivery partners about new order
     await notifyAllDeliveryPartners(String(order._id), order.orderNumber, order.total);
+
+    // Notify admin about new order
+    await notifyAdminNewOrder(order.orderNumber, order.total, user.name);
 
     return NextResponse.json({ order }, { status: 201 });
   } catch (err: any) {

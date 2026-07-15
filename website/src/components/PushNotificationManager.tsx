@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthContext";
 import { registerPushNotifications, isPushSubscribed } from "@/lib/pushNotifications";
-import { Bell, BellOff, X } from "lucide-react";
+import { Bell, X } from "lucide-react";
 
 export default function PushNotificationManager() {
   const { firebaseUser, getToken } = useAuth();
@@ -13,15 +13,31 @@ export default function PushNotificationManager() {
 
   useEffect(() => {
     if (!firebaseUser) return;
+
     isPushSubscribed().then((s) => {
       setSubscribed(s);
-      if (!s && Notification.permission === "default") {
-        // Show custom prompt after a short delay
-        const timer = setTimeout(() => setShowPrompt(true), 3000);
-        return () => clearTimeout(timer);
+
+      if (!s) {
+        // Not subscribed — check permission state
+        if (Notification.permission === "granted") {
+          // Permission already granted but no subscription — auto-subscribe silently
+          registerPushNotifications(getToken).then((ok) => {
+            setSubscribed(ok);
+            if (!ok) console.warn("[Push] Auto-subscribe failed");
+          });
+        } else if (Notification.permission === "default") {
+          // Haven't asked yet — show custom prompt after 3s
+          const timer = setTimeout(() => {
+            if (!sessionStorage.getItem("push-prompt-dismissed")) {
+              setShowPrompt(true);
+            }
+          }, 3000);
+          return () => clearTimeout(timer);
+        }
+        // permission === "denied" — do nothing
       }
     });
-  }, [firebaseUser]);
+  }, [firebaseUser, getToken]);
 
   async function handleSubscribe() {
     setLoading(true);
@@ -33,11 +49,10 @@ export default function PushNotificationManager() {
 
   function handleDismiss() {
     setShowPrompt(false);
-    // Don't ask again this session
     sessionStorage.setItem("push-prompt-dismissed", "1");
   }
 
-  // Don't show if dismissed this session or already subscribed
+  // Don't show banner if already subscribed or prompt hidden
   if (subscribed || !showPrompt || sessionStorage.getItem("push-prompt-dismissed")) {
     return null;
   }

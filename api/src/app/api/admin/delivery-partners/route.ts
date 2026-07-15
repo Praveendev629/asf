@@ -15,3 +15,31 @@ export async function GET() {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    await connectDB();
+    const body = await req.json();
+    const { id, isAvailable } = body;
+    if (!id) return NextResponse.json({ error: "Partner ID required" }, { status: 400 });
+
+    await DeliveryPartner.findByIdAndUpdate(id, { isAvailable });
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Partner ID required" }, { status: 400 });
+
+    await DeliveryPartner.findByIdAndDelete(id);
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
