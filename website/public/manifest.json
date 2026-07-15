@@ -1,0 +1,27 @@
+{
+  "name": "ASF Shopee — Premium Grocery, Delivered Fast",
+  "short_name": "ASF Shopee",
+  "description": "Premium grocery commerce with fast delivery and live order tracking.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#B8763E",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "food"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

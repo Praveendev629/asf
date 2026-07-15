@@ -1,5 +1,10 @@
 import { Schema, models, model } from "mongoose";
 
+export interface IPushSubscription {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}
+
 export interface IUser {
   _id: string;
   firebaseUid: string;
@@ -18,6 +23,7 @@ export interface IUser {
   };
   onboardingComplete: boolean;
   fcmTokens: string[];
+  pushSubscriptions: IPushSubscription[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +46,10 @@ const UserSchema = new Schema<IUser>(
     },
     onboardingComplete: { type: Boolean, default: false },
     fcmTokens: { type: [String], default: [] },
+    pushSubscriptions: {
+      type: [{ endpoint: String, keys: { p256dh: String, auth: String } }],
+      default: [],
+    },
   },
   { timestamps: true }
 );
