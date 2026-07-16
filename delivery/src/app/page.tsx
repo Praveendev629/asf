@@ -1,17 +1,59 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User } from "lucide-react";
+import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 interface DeliveryPartnerInfo { _id: string; name: string; phone: string; email: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; items: { name: string; quantity: number; price: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
 const STATUS_LABELS: Record<string, string> = { placed: "New Order", confirmed: "Confirmed", packed: "Packed", dispatched: "Dispatched", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
 const STATUS_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
 
+function LoginForm() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault(); setSubmitting(true); setError("");
+    try {
+      const res = await fetch("/api/delivery/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Login failed");
+      localStorage.setItem("delivery_token", data.token);
+      localStorage.setItem("delivery_partner", JSON.stringify(data.partner));
+      window.location.reload();
+    } catch (err: any) { setError(err.message); } finally { setSubmitting(false); }
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-700 px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 mb-4"><Truck size={32} className="text-white" /></div>
+          <h1 className="font-display text-3xl font-semibold text-white">Delivery Partner</h1><p className="text-white/60 mt-2">Sign in to your account</p>
+        </div>
+        <form onSubmit={handleLogin} className="bg-white rounded-2xl p-8 shadow-xl space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Email</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3"><Mail size={18} className="text-gray-400 mr-3" /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your@email.com" className="flex-1 outline-none text-sm" required /></div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Password</label>
+            <div className="flex items-center border border-gray-200 rounded-xl px-4 py-3"><Lock size={18} className="text-gray-400 mr-3" /><input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" className="flex-1 outline-none text-sm" required /><button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
+          </div>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button type="submit" disabled={submitting} className="w-full bg-gray-900 text-white font-semibold py-3 rounded-xl hover:bg-gray-800 transition disabled:opacity-50">{submitting ? "Signing in..." : "Sign In"}</button>
+          <p className="text-center text-sm text-gray-500">Don&apos;t have an account? <Link href="/register" className="text-gray-900 font-medium hover:underline">Register</Link></p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function DeliveryDashboard() {
-  const router = useRouter();
   const [partner, setPartner] = useState<DeliveryPartnerInfo | null>(null);
   const [availableOrders, setAvailableOrders] = useState<Order[]>([]);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
@@ -21,7 +63,7 @@ export default function DeliveryDashboard() {
   useEffect(() => {
     const token = localStorage.getItem("delivery_token");
     const stored = localStorage.getItem("delivery_partner");
-    if (!token || !stored) { router.push("/login"); return; }
+    if (!token || !stored) { setLoading(false); return; }
     setPartner(JSON.parse(stored)); loadOrders(token);
     const interval = setInterval(() => { const t = localStorage.getItem("delivery_token"); if (t) loadOrders(t); }, 10000);
     if (navigator.geolocation) {
@@ -66,7 +108,7 @@ export default function DeliveryDashboard() {
     loadOrders(token);
   }
 
-  function handleLogout() { localStorage.removeItem("delivery_token"); localStorage.removeItem("delivery_partner"); router.push("/login"); }
+  function handleLogout() { localStorage.removeItem("delivery_token"); localStorage.removeItem("delivery_partner"); window.location.reload(); }
 
   function openNavigation(destLat: number, destLng: number) {
     if (navigator.geolocation) {
@@ -76,17 +118,25 @@ export default function DeliveryDashboard() {
           window.open(url, "_blank");
         },
         () => {
-          // GPS failed — open maps with destination only
           const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
           window.open(url, "_blank");
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
     } else {
-      // No geolocation support — open maps with destination only
       const url = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}&travelmode=driving`;
       window.open(url, "_blank");
     }
+  }
+
+  // Not logged in — show login form directly (no redirect)
+  const token = typeof window !== "undefined" ? localStorage.getItem("delivery_token") : null;
+  if (!partner && !loading && !token) {
+    return <LoginForm />;
+  }
+
+  if (!partner) {
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-400">Loading...</div>;
   }
 
   const displayOrders = activeTab === "available" ? availableOrders : myOrders;

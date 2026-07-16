@@ -1,5 +1,5 @@
 const CACHE_NAME = "asf-delivery-v1";
-const STATIC_ASSETS = ["/", "/login", "/manifest.json", "/logo.png"];
+const STATIC_ASSETS = ["/", "/manifest.json", "/logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(STATIC_ASSETS)));
@@ -11,7 +11,6 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Chrome requires a fetch handler for PWA installability
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -34,20 +33,20 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "ASF Delivery", body: "You have a new update!", url: "/login" };
+  let data = { title: "ASF Delivery", body: "You have a new update!", url: "/" };
   if (event.data) {
     try { data = { ...data, ...event.data.json() }; } catch { data.body = event.data.text(); }
   }
   event.waitUntil(self.registration.showNotification(data.title, {
     body: data.body, icon: "/logo.png", badge: "/logo.png",
     vibrate: [200, 100, 200], tag: "asf-delivery", renotify: true,
-    data: { url: data.url || "/login" },
+    data: { url: data.url || "/" },
   }));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/login";
+  const url = event.notification.data?.url || "/";
   event.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then((w) => {
     for (const c of w) { if (c.url.includes(self.location.origin)) { c.navigate(url); return c.focus(); } }
     return clients.openWindow(url);
