@@ -17,37 +17,52 @@ async function sendWebPush(
   body: string,
   url?: string
 ) {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || subscriptions.length === 0) return;
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.error("[DeliveryPush] VAPID keys not configured");
+    return;
+  }
+  if (subscriptions.length === 0) return;
 
   const payload = JSON.stringify({ title, body, url: url || "/" });
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     subscriptions.map(async (sub) => {
       try {
         await webPush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
+        console.log("[DeliveryPush] Sent to:", sub.endpoint.substring(0, 60));
       } catch (err: any) {
+        console.error("[DeliveryPush] Failed:", err.statusCode, err.message);
         if (err.statusCode === 404 || err.statusCode === 410) {
           await DeliveryPartner.updateOne(
             { "pushSubscriptions.endpoint": sub.endpoint },
             { $pull: { pushSubscriptions: { endpoint: sub.endpoint } } }
           );
         }
+        throw err;
       }
     })
   );
+
+  const failed = results.filter((r) => r.status === "rejected").length;
+  console.log(`[DeliveryPush] Web push: ${subscriptions.length - failed}/${subscriptions.length} sent`);
 }
 
 export async function sendDeliveryNotification(partnerId: string, title: string, body: string, data?: Record<string, string>) {
   try {
     const partner = await DeliveryPartner.findById(partnerId);
-    if (!partner) return;
+    if (!partner) {
+      console.warn("[DeliveryPush] Partner not found:", partnerId);
+      return;
+    }
 
-    // Web push to PWA
+    console.log("[DeliveryPush] Sending to partner:", partner.name, "| subs:", partner.pushSubscriptions?.length || 0, "| tokens:", partner.fcmTokens?.length || 0);
+
+    // Web push
     if (partner.pushSubscriptions?.length > 0) {
       await sendWebPush(partner.pushSubscriptions, title, body, "/");
     }
 
-    // Expo push to mobile
+    // Expo push
     if (partner.fcmTokens?.length > 0) {
       const messages = partner.fcmTokens.map((token: string) => ({
         to: token, sound: "default", title, body, data: data || {}, channelId: "orders",
@@ -60,23 +75,26 @@ export async function sendDeliveryNotification(partnerId: string, title: string,
         });
       }
     }
-  } catch {}
+  } catch (err: any) {
+    console.error("[DeliveryPush] sendDeliveryNotification error:", err.message);
+  }
 }
 
 export async function notifyAllDeliveryPartners(orderId: string, orderNumber: string, total: number) {
   try {
     const partners = await DeliveryPartner.find({ isAvailable: true });
+    console.log("[DeliveryPush] Notifying", partners.length, "available partners for order", orderNumber);
 
     for (const partner of partners) {
       const title = "New Order Available!";
       const body = `Order #${orderNumber} — ₹${total}. Tap to accept.`;
 
-      // Web push to PWA
+      // Web push
       if (partner.pushSubscriptions?.length > 0) {
         await sendWebPush(partner.pushSubscriptions, title, body, "/");
       }
 
-      // Expo push to mobile
+      // Expo push
       if (partner.fcmTokens?.length > 0) {
         const messages = partner.fcmTokens.map((token: string) => ({
           to: token, sound: "default", title, body,
@@ -91,5 +109,7 @@ export async function notifyAllDeliveryPartners(orderId: string, orderNumber: st
         }
       }
     }
-  } catch {}
+  } catch (err: any) {
+    console.error("[DeliveryPush] notifyAllDeliveryPartners error:", err.message);
+  }
 }

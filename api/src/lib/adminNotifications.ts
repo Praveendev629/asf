@@ -17,44 +17,60 @@ async function sendAdminWebPush(
   body: string,
   url?: string
 ) {
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || subscriptions.length === 0) return;
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.error("[AdminPush] VAPID keys not configured");
+    return;
+  }
+  if (subscriptions.length === 0) return;
 
   const payload = JSON.stringify({ title, body, url: url || "/" });
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     subscriptions.map(async (sub) => {
       try {
         await webPush.sendNotification({ endpoint: sub.endpoint, keys: sub.keys }, payload);
+        console.log("[AdminPush] Sent to:", sub.endpoint.substring(0, 60));
       } catch (err: any) {
+        console.error("[AdminPush] Failed:", err.statusCode, err.message);
         if (err.statusCode === 404 || err.statusCode === 410) {
           await Admin.updateOne(
             { "pushSubscriptions.endpoint": sub.endpoint },
             { $pull: { pushSubscriptions: { endpoint: sub.endpoint } } }
           );
         }
+        throw err;
       }
     })
   );
+
+  const failed = results.filter((r) => r.status === "rejected").length;
+  console.log(`[AdminPush] Web push: ${subscriptions.length - failed}/${subscriptions.length} sent`);
 }
 
 export async function sendAdminNotification(title: string, body: string, data?: Record<string, string>, url?: string) {
   try {
     const admins = await Admin.find({});
-    if (admins.length === 0) return;
+    console.log("[AdminPush] Found", admins.length, "admin(s)");
 
-    // Send web push to admin PWA subscriptions
+    if (admins.length === 0) {
+      console.warn("[AdminPush] No admin documents in DB — notifications won't send");
+      return;
+    }
+
+    // Web push
     const allSubscriptions: { endpoint: string; keys: { p256dh: string; auth: string } }[] = [];
     admins.forEach((admin: any) => {
       if (admin.pushSubscriptions?.length) allSubscriptions.push(...admin.pushSubscriptions);
     });
+    console.log("[AdminPush] Total web push subscriptions:", allSubscriptions.length);
     if (allSubscriptions.length > 0) {
       await sendAdminWebPush(allSubscriptions, title, body, url);
     }
 
-    // Send Expo push to admin mobile tokens
+    // Expo push
     const allTokens: string[] = [];
     admins.forEach((admin: any) => {
-      if (admin.fcmTokens) allTokens.push(...admin.fcmTokens);
+      if (admin.fcmTokens?.length) allTokens.push(...admin.fcmTokens);
     });
     if (allTokens.length > 0) {
       const messages = allTokens.map((token: string) => ({
@@ -68,19 +84,24 @@ export async function sendAdminNotification(title: string, body: string, data?: 
         });
       }
     }
-  } catch {}
+  } catch (err: any) {
+    console.error("[AdminPush] sendAdminNotification error:", err.message);
+  }
 }
 
 export async function notifyAdminNewCustomer(name: string, email: string) {
+  console.log("[AdminPush] notifyAdminNewCustomer:", name, email);
   await sendAdminNotification("New Customer!", `${name} (${email}) has registered.`, { type: "new_customer" });
 }
 
 export async function notifyAdminNewDeliveryPartner(name: string, phone: string) {
+  console.log("[AdminPush] notifyAdminNewDeliveryPartner:", name, phone);
   await sendAdminNotification("New Delivery Partner!", `${name} (${phone}) has registered.`, { type: "new_delivery_partner" });
 }
 
 export async function notifyAdminNewOrder(orderNumber: string, total: number, customerName: string) {
-  await sendAdminNotification("New Order!", `#${orderNumber} — ₹${total} from ${customerName}.`, { type: "new_order" }, "/orders");
+  console.log("[AdminPush] notifyAdminNewOrder:", orderNumber, total, customerName);
+  await sendAdminNotification("New Order!", `#${orderNumber} — ₹${total} from ${customerName}.`, { type: "new_order" }, "/");
 }
 
 export async function notifyAdminOrderDelivered(orderNumber: string, total: number) {

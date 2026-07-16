@@ -12,13 +12,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "subscription required" }, { status: 400 });
     }
 
+    console.log("[DeliverySub] Saving subscription for partner:", partnerData.partnerId, "| endpoint:", subscription.endpoint.substring(0, 60));
+
     await DeliveryPartner.findByIdAndUpdate(
       partnerData.partnerId,
       { $addToSet: { pushSubscriptions: { endpoint: subscription.endpoint, keys: subscription.keys } } }
     );
 
+    console.log("[DeliverySub] Saved successfully");
     return NextResponse.json({ success: true });
   } catch (err: any) {
+    console.error("[DeliverySub] Error:", err.message);
     return NextResponse.json({ error: err.message }, { status: 401 });
   }
 }

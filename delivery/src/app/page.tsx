@@ -1,13 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
-import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Truck, LogOut, MapPin, Phone, Navigation, CheckCircle2, Package, Clock, User, Mail, Lock, Eye, EyeOff, Bell, X } from "lucide-react";
 
 interface DeliveryPartnerInfo { _id: string; name: string; phone: string; email: string; }
 interface Order { _id: string; orderNumber: string; userName: string; userPhone: string; total: number; status: string; items: { name: string; quantity: number; price: number }[]; deliveryAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; lat?: number; lng?: number }; deliveryPartner?: { name: string; phone: string; eta: string }; createdAt: string; }
 const STATUS_LABELS: Record<string, string> = { placed: "New Order", confirmed: "Confirmed", packed: "Packed", dispatched: "Dispatched", out_for_delivery: "Out for Delivery", delivered: "Delivered" };
 const STATUS_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
+
+// Simple notification beep using Web Audio API
+function playNotificationSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -59,20 +77,17 @@ export default function DeliveryDashboard() {
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<"available" | "my">("available");
   const [loading, setLoading] = useState(true);
+  const [newOrderAlert, setNewOrderAlert] = useState<Order | null>(null);
+  const prevAvailableIds = useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    const token = localStorage.getItem("delivery_token");
-    const stored = localStorage.getItem("delivery_partner");
-    if (!token || !stored) { setLoading(false); return; }
-    setPartner(JSON.parse(stored)); loadOrders(token);
-    const interval = setInterval(() => { const t = localStorage.getItem("delivery_token"); if (t) loadOrders(t); }, 10000);
-    if (navigator.geolocation) {
-      const watchId = navigator.geolocation.watchPosition((pos) => {
-        fetch("/api/delivery/location", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ lat: pos.coords.latitude, lng: pos.coords.longitude }) });
-      }, () => {}, { enableHighAccuracy: true });
-      return () => { navigator.geolocation.clearWatch(watchId); clearInterval(interval); };
+  const playSoundAndAlert = useCallback((newOrders: Order[]) => {
+    if (newOrders.length > 0) {
+      playNotificationSound();
+      setNewOrderAlert(newOrders[0]);
+      setActiveTab("available");
+      // Auto-dismiss after 8 seconds
+      setTimeout(() => setNewOrderAlert(null), 8000);
     }
-    return () => clearInterval(interval);
   }, []);
 
   const ts = () => `_t=${Date.now()}`;
@@ -84,7 +99,18 @@ export default function DeliveryDashboard() {
         fetch("/api/delivery/orders", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/delivery/orders?filter=my", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
-      if (availRes.ok) { const data = await availRes.json(); setAvailableOrders(data.orders || []); }
+      if (availRes.ok) {
+        const data = await availRes.json();
+        const newOrders: Order[] = data.orders || [];
+        // Detect new orders that weren't in the previous poll
+        const currentIds = new Set(newOrders.map((o) => o._id));
+        if (prevAvailableIds.current.size > 0) {
+          const freshOrders = newOrders.filter((o) => !prevAvailableIds.current.has(o._id));
+          if (freshOrders.length > 0) playSoundAndAlert(freshOrders);
+        }
+        prevAvailableIds.current = currentIds;
+        setAvailableOrders(newOrders);
+      }
       if (myRes.ok) { const data = await myRes.json(); setMyOrders(data.orders || []); }
     } finally { setLoading(false); }
   }
@@ -146,9 +172,28 @@ export default function DeliveryDashboard() {
       <header className="bg-gray-900 text-white px-4 py-4 sticky top-0 z-50">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3"><Truck size={24} /><div><h1 className="font-semibold text-lg">ASF Delivery</h1>{partner && <p className="text-white/60 text-xs">{partner.name}</p>}</div></div>
-          <button onClick={handleLogout} className="text-white/60 hover:text-white"><LogOut size={20} /></button>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span>
+            <button onClick={handleLogout} className="text-white/60 hover:text-white"><LogOut size={20} /></button>
+          </div>
         </div>
       </header>
+
+      {/* New Order Alert Banner */}
+      {newOrderAlert && (
+        <div className="max-w-2xl mx-auto px-4 pt-3">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl p-4 shadow-lg animate-bounce-once">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0"><Bell size={20} /></div>
+              <div className="flex-1">
+                <p className="font-bold text-sm">New Order Available!</p>
+                <p className="text-white/90 text-xs mt-0.5">#{newOrderAlert.orderNumber} — ₹{newOrderAlert.total}</p>
+              </div>
+              <button onClick={() => setNewOrderAlert(null)} className="text-white/70 hover:text-white"><X size={18} /></button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-2xl mx-auto px-4 py-4">
         <div className="flex gap-2 mb-6">
           <button onClick={() => setActiveTab("available")} className={`flex-1 py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition ${activeTab === "available" ? "bg-gray-900 text-white" : "bg-white text-gray-700 border border-gray-200"}`}><Package size={16} /> Available ({availableOrders.length})</button>
