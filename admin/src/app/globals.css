@@ -6,3 +6,5 @@ html { scroll-behavior: smooth; } body { background: #faf7f2; color: #1c2028; }
 .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -8px rgba(184, 118, 62, 0.65); }
 .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 .card { background: white; border-radius: 1.25rem; box-shadow: 0 2px 12px rgba(28, 32, 40, 0.08); }
+.animate-bounce { animation: bounce 1s infinite; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }

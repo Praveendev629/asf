@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
-import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon, Upload, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, ClipboardList, Users, Truck, MapPin, Phone, Mail, ChevronDown, ChevronUp, RefreshCw, Image as ImageIcon, Upload, FileText, Bell, X } from "lucide-react";
 import ProductForm from "@/components/ProductForm";
 
 interface Product { _id: string; name: string; slug: string; images: string[]; category: string; unit: string; unitType: string; unitOptions: { label: string; price: number; mrp: number; stock: number }[]; mrp: number; price: number; stock: number; description: string; variants: { name: string; slug: string; price: number; mrp: number; stock: number; image: string; attributes: Record<string, string> }[]; relatedProducts: string[]; specifications: { label: string; value: string; icon: string }[]; productType: string; }
@@ -12,6 +12,23 @@ interface DeliveryPartnerData { _id: string; name: string; phone: string; email:
 interface UpdateData { _id: string; title: string; description: string; imageUrl: string; link: string; isActive: boolean; order: number; createdAt: string; }
 const STAGES = ["placed", "confirmed", "packed", "dispatched", "out_for_delivery", "delivered"];
 const STAGE_COLORS: Record<string, string> = { placed: "bg-blue-100 text-blue-700", confirmed: "bg-indigo-100 text-indigo-700", packed: "bg-amber-100 text-amber-700", dispatched: "bg-purple-100 text-purple-700", out_for_delivery: "bg-orange-100 text-orange-700", delivered: "bg-green-100 text-green-700" };
+
+function playNotificationSound() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch {}
+}
 
 export default function AdminPage() {
   const [tab, setTab] = useState<"products" | "orders" | "users" | "partners" | "updates">("products");
@@ -24,6 +41,16 @@ export default function AdminPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [newOrderAlert, setNewOrderAlert] = useState<Order | null>(null);
+  const prevOrderIds = useRef<Set<string>>(new Set());
+
+  const playSoundAndAlert = useCallback((newOrders: Order[]) => {
+    if (newOrders.length > 0) {
+      playNotificationSound();
+      setNewOrderAlert(newOrders[0]);
+      setTimeout(() => setNewOrderAlert(null), 10000);
+    }
+  }, []);
 
   useEffect(() => {
     loadAll();
@@ -34,7 +61,20 @@ export default function AdminPage() {
   async function loadAll() { await Promise.all([loadProducts(), loadOrders(), loadUsers(), loadPartners(), loadUpdates()]); }
   async function handleRefresh() { setRefreshing(true); await loadAll(); setRefreshing(false); }
   async function loadProducts() { const res = await fetch("/api/products"); const data = await res.json(); setProducts(data.products || []); }
-  async function loadOrders() { const res = await fetch("/api/admin/orders"); if (res.ok) { const data = await res.json(); setOrders(data.orders || []); } }
+  async function loadOrders() {
+    const res = await fetch("/api/admin/orders");
+    if (res.ok) {
+      const data = await res.json();
+      const newOrders: Order[] = data.orders || [];
+      const currentIds = new Set(newOrders.map((o) => o._id));
+      if (prevOrderIds.current.size > 0) {
+        const freshOrders = newOrders.filter((o) => !prevOrderIds.current.has(o._id) && o.status === "placed");
+        if (freshOrders.length > 0) playSoundAndAlert(freshOrders);
+      }
+      prevOrderIds.current = currentIds;
+      setOrders(newOrders);
+    }
+  }
   async function loadUsers() { const res = await fetch("/api/admin/users"); if (res.ok) { const data = await res.json(); setUsers(data.users || []); } }
   async function loadPartners() { const res = await fetch("/api/admin/delivery-partners"); if (res.ok) { const data = await res.json(); setPartners(data.partners || []); } }
   async function loadUpdates() { const res = await fetch("/api/updates"); if (res.ok) { const data = await res.json(); setUpdates(data.updates || []); } }
@@ -75,6 +115,23 @@ export default function AdminPage() {
           <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
         </button>
       </div>
+
+      {/* New Order Alert Banner */}
+      {newOrderAlert && (
+        <div className="mb-4">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl p-4 shadow-lg animate-bounce">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0"><Bell size={20} /></div>
+              <div className="flex-1">
+                <p className="font-bold text-sm">New Order Received!</p>
+                <p className="text-white/90 text-xs mt-0.5">#{newOrderAlert.orderNumber} — {newOrderAlert.userName} — ₹{newOrderAlert.total}</p>
+                <p className="text-white/70 text-xs mt-0.5">{newOrderAlert.items.map((i) => i.name).join(", ")}</p>
+              </div>
+              <button onClick={() => setNewOrderAlert(null)} className="text-white/70 hover:text-white"><X size={18} /></button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition ${tab === t.key ? "bg-asf-slateDeep text-white" : "bg-white border border-asf-mist text-asf-slate hover:border-asf-copper"}`}>
